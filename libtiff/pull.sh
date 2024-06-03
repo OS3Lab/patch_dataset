@@ -1,0 +1,1 @@
+git clone https://github.com/libsdl-org/libtiff.git $SRC
