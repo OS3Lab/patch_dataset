@@ -4,117 +4,221 @@
 # 输出：部分填好的 cfg 文件（包括 new_patch_parent, target_release），使用 git format-patch 生成的 real.patch 文件
 
 import os
+import re
+
 import requests
 from bs4 import BeautifulSoup
 
 proj_url_map = {
-    'ffmpeg': 'https://github.com/FFmpeg/FFmpeg'
+    "ffmpeg": "https://github.com/FFmpeg/FFmpeg",
+    "glibc": "https://sourceware.org/git/?p=glibc.git",
+    "linux": "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/",
+}
+
+proj_commit_map = {
+    "ffmpeg": "https://github.com/FFmpeg/FFmpeg/commit/",
+    "glibc": "https://sourceware.org/git/?p=glibc.git;a=commit;h=",
+    "linux": "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/commit?id=",
 }
 
 # proj 与 patch_dataset 文件夹的相对路径
 proj_path_map = {
-    'ffmpeg': '../FFmpeg'
+    "ffmpeg": "../../LLM_Backport/source-project/FFmpeg",
+    "glibc": "../../LLM_Backport/source-project/glibc",
+    "linux": "../../LLM_Backport/source-project/linux-stable",
 }
 
 
-def write_patch(proj_name, cve_id, mannual_backport):
-    # 检查 project 和 cve 文件夹是否存在
+def write_patch(proj_name, cve_id, backport_id):
+    """
+    Write real.patch in {proj_name}/{cve_id}.
+
+    Args:
+        proj_name (str): The name of the project.
+        cve_id (str): The CVE ID.
+        backport (str): The manual backport commit id.
+
+    Returns:
+        None
+    """
+    # 检查 patch_dataset/proj_name/cve 是否存在
     if not os.path.exists(proj_name):
         os.makedirs(proj_name)
-        print('create project folder: ', proj_name)
     if not os.path.exists(os.path.join(proj_name, cve_id)):
         os.makedirs(os.path.join(proj_name, cve_id))
-        print('create cve folder: ', os.path.join(proj_name, cve_id))
+    if os.path.exists(os.path.join(proj_name, cve_id, "real.patch")):
+        os.remove(os.path.join(proj_name, cve_id, "real.patch"))
 
-    # 切换到 project 文件夹，生成 patch 文件
+
+    # 切换到 project，生成 patch 文件到 patch_dataset/proj_name/cve
     dataset_abs_path = os.getcwd()
     proj_abs_path = os.path.abspath(proj_path_map[proj_name])
     os.chdir(proj_abs_path)
-    os.system('git format-patch -1 %s -o %s' % (mannual_backport,
-              os.path.join(dataset_abs_path, proj_name, cve_id)))
+    os.system(
+        "git format-patch -1 %s -o %s"
+        % (backport_id, os.path.join(dataset_abs_path, proj_name, cve_id))
+    )
 
-    # 切换到cve文件夹
+    # 切换到 patch_dataset/proj_name/cve
     os.chdir(os.path.join(dataset_abs_path, proj_name, cve_id))
-    os.system('mv *.patch real.patch')
-    print('generate patch file: ', os.path.join(
-        proj_name, cve_id, 'real.patch'))
 
-    # 返回patch_dataset文件夹
+    os.system("mv *.patch real.patch")
+    print("generate patch file: ", os.path.join(proj_name, cve_id, "real.patch"))
+
+    # 切换回 patch_dataset
     os.chdir(dataset_abs_path)
 
 
-def write_cfg(proj_name, proj_url, cve_id, patch_release, parent_release, parent_backport):
+def write_cfg(
+    proj_name, proj_url, cve_id, patch_release, parent_release, parent_backport
+):
+    """
+    Write config.yml in {proj_name}/{cve_id}.
+
+    Args:
+        proj_name (str): The name of the project.
+        proj_url (str): The url of the project.
+        cve_id (str): The CVE ID.
+        patch_release (str): The patch release commit id.
+        parent_release (str): The parent commit of patch release.
+        parent_backport (str): The parent commit of mannual backport.
+
+    Returns:
+        None
+    """
 
     # new_patch = patch_release_commit, 主线引入 patch 的 commit
     # new_patch_parent = new_patch 的 parent commit
     # target_release = mannual_backport_commit 的 parent commit
-    template = '''project: %s
+    template = """project: %s
 project_url: %s
 new_patch: %s
 new_patch_parent: %s
 target_release: %s
 sanitizer: 
 error_massage: 
-tag: %s'''
-    template = template % (proj_name, proj_url, patch_release,
-                           parent_release, parent_backport, cve_id)
+tag: %s"""
+    template = template % (
+        proj_name,
+        proj_url,
+        patch_release,
+        parent_release,
+        parent_backport,
+        cve_id,
+    )
 
     # 检查 project 文件夹是否存在
     if not os.path.exists(proj_name):
         os.makedirs(proj_name)
-        print('create project folder: ', proj_name)
-    else:
-        print('project folder exists: ', proj_name)
 
     # 检查 cve 文件夹是否存在
     if not os.path.exists(os.path.join(proj_name, cve_id)):
         os.makedirs(os.path.join(proj_name, cve_id))
-        print('create cve folder: ', os.path.join(proj_name, cve_id))
-    else:
-        print('cve folder exists: ', os.path.join(proj_name, cve_id))
 
-    with open(os.path.join(proj_name, cve_id, 'config.yml'), 'w') as f:
+    # 写入 config 文件
+    with open(os.path.join(proj_name, cve_id, "config.yml"), "w") as f:
         f.write(template)
-        print('write config file: ', os.path.join(
-            proj_name, cve_id, 'config.yml'))
+        print("write config file: ", os.path.join(proj_name, cve_id, "config.yml"))
 
 
-# 通过 commit url 获取 parent commit
-def get_parent_commit(commit_url):
-    response = requests.get(commit_url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    elements = soup.find_all(class_='sha-block ml-0')
-    for element in elements:
-        parent_commit = element.find_all('a')[0]['href'].split('/')[-1]
-        return parent_commit
+class Project:
+    def __init__(self, csv_data: str, commit_url_prefix: str):
+        self.commit_id = self.extract_commit_id(csv_data)
+        self.commit_url = commit_url_prefix + self.commit_id
+
+    def extract_commit_id(self, csv_data: str) -> str:
+        raise NotImplementedError("Subclasses should implement this method")
+
+    def get_parent(self) -> str:
+        raise NotImplementedError("Subclasses should implement this method")
+
+
+class Github(Project):
+    def extract_commit_id(self, csv_data: str) -> str:
+        if "https:" in csv_data:
+            return re.search(r"/commit/([a-z0-9]*)", csv_data).group(1)
+        return csv_data
+
+    def get_parent(self) -> str:
+        response = requests.get(self.commit_url)
+        soup = BeautifulSoup(response.text, "html.parser")
+        elements = soup.find_all(class_="sha-block ml-0")
+        for element in elements:
+            return element.find_all("a")[0]["href"].split("/")[-1]
+
+
+class Kernel(Project):
+    def extract_commit_id(self, csv_data: str) -> str:
+        if "https:" in csv_data:
+            return re.search(r"\?id=([a-z0-9]*)", csv_data).group(1)
+        return csv_data
+
+    def get_parent(self) -> str:
+        response = requests.get(self.commit_url)
+        soup = BeautifulSoup(response.text, "html.parser")
+        parent_th = soup.find("th", string="parent")
+        if parent_th:
+            parent_tr = parent_th.find_parent("tr")
+            if parent_tr:
+                link = parent_tr.find("a")["href"]
+                return link.split("/")[-1].replace("?id=", "")
+
+
+def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Project:
+    project_classes = {
+        "ffmpeg": Github,
+        "linux": Kernel,
+    }
+    project_class = project_classes.get(proj_name)
+    if project_class:
+        return project_class(csv_data, commit_url_prefix)
+    raise ValueError(f"Unsupported project name: {proj_name}")
+
+
+# 处理每一行数据
+def process_project_line(project_name, release, backport, proj_commit_url):
+    handler = create_project(project_name, release, proj_commit_url)
+    release_id = handler.commit_id
+    parent_release_id = handler.get_parent()
+
+    handler = create_project(project_name, backport, proj_commit_url)
+    backport_id = handler.commit_id
+    parent_backport_id = handler.get_parent()
+
+    return release_id, parent_release_id, backport_id, parent_backport_id
 
 
 # 读取csv文件，获取 parent_release 和 parent_backport
 def main():
     # CVE-2022-3964, ffmpeg, 92f9b28ed84a77138105475beba16c146bdaf984, ad28b01a141703b831256b712e0613281b15fcf0
-    with open('scripts/data.csv', 'r') as f:
+    with open("scripts/data.csv", "r") as f:
         lines = f.readlines()
         for line in lines:
-            cve_id, project, patch_release, mannual_backport = line.strip().split(',')
-            project_url = proj_url_map[project]
-            if 'https:' in patch_release:
-                patch_release = patch_release.split('/')[-1]
-            if 'https:' in mannual_backport:
-                mannual_backport = mannual_backport.split('/')[-1]
+            cve_id, project_name, release, backport = line.strip().split(",")
+            project_url = proj_url_map.get(project_name)
+            proj_commit_url = proj_commit_map.get(project_name)
 
-            patch_release_url = project_url + '/commit/' + patch_release
-            parent_release = get_parent_commit(patch_release_url)
-            mannual_backport_url = project_url + '/commit/' + mannual_backport
-            parent_backport = get_parent_commit(mannual_backport_url)
+            release_id, parent_release_id, backport_id, parent_backport_id = (
+                process_project_line(project_name, release, backport, proj_commit_url)
+            )
 
-            write_cfg(project, project_url, cve_id, patch_release,
-                      parent_release, parent_backport)
-            write_patch(project, cve_id, mannual_backport)
+            write_cfg(
+                project_name,
+                project_url,
+                cve_id,
+                release_id,
+                parent_release_id,
+                parent_backport_id,
+            )
+            if not backport_id:
+                write_patch(project_name, cve_id, backport_id)
+            else:
+                print("backport_id is empty, no real patch")
 
 
-if __name__ == '__main__':
-    if os.path.basename(os.getcwd()) != 'scripts':
-        print('Please run this script in patch_dataset/scripts folder')
+if __name__ == "__main__":
+    if os.path.basename(os.getcwd()) != "scripts":
+        print("Please run this script in patch_dataset/scripts folder")
         exit(1)
     else:
         # 切换到 patch_dataset 文件夹
