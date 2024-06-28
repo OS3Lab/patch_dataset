@@ -191,7 +191,7 @@ def process_project_line(project_name, release, backport, proj_commit_url):
 # 读取csv文件，获取 parent_release 和 parent_backport
 def main():
     # CVE-2022-3964, ffmpeg, 92f9b28ed84a77138105475beba16c146bdaf984, ad28b01a141703b831256b712e0613281b15fcf0
-    with open("scripts/data.csv", "r") as f:
+    with open("scripts/config_data.csv", "r") as f:
         lines = f.readlines()
         for line in lines:
             cve_id, project_name, release, backport = line.strip().split(",")
