@@ -96,7 +96,7 @@ new_patch: %s
 new_patch_parent: %s
 target_release: %s
 sanitizer: 
-error_massage: 
+error_message: 
 tag: %s"""
     template = template % (
         proj_name,
