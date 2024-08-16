@@ -13,12 +13,14 @@ proj_url_map = {
     "ffmpeg": "https://github.com/FFmpeg/FFmpeg",
     "glibc": "https://sourceware.org/git/?p=glibc.git",
     "linux": "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/",
+    "qt": "https://github.com/qt/qtbase",
 }
 
 proj_commit_map = {
     "ffmpeg": "https://github.com/FFmpeg/FFmpeg/commit/",
     "glibc": "https://sourceware.org/git/?p=glibc.git;a=commit;h=",
     "linux": "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/commit?id=",
+    "qt": "https://github.com/qt/qtbase/commit/",
 }
 
 # proj 与 patch_dataset 文件夹的相对路径
@@ -26,6 +28,7 @@ proj_path_map = {
     "ffmpeg": "../../LLM_Backport/source-project/FFmpeg",
     "glibc": "../../LLM_Backport/source-project/glibc",
     "linux": "../../LLM_Backport/source-project/linux-stable",
+    "qt": "../../LLM_Backport/source-project/qtbase",
 }
 
 
@@ -48,7 +51,6 @@ def write_patch(proj_name, cve_id, backport_id):
         os.makedirs(os.path.join(proj_name, cve_id))
     if os.path.exists(os.path.join(proj_name, cve_id, "real.patch")):
         os.remove(os.path.join(proj_name, cve_id, "real.patch"))
-
 
     # 切换到 project，生成 patch 文件到 patch_dataset/proj_name/cve
     dataset_abs_path = os.getcwd()
@@ -168,6 +170,7 @@ def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Pro
     project_classes = {
         "ffmpeg": Github,
         "linux": Kernel,
+        "qt": Github,
     }
     project_class = project_classes.get(proj_name)
     if project_class:
