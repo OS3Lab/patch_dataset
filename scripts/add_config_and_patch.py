@@ -210,7 +210,7 @@ def main():
                 parent_release_id,
                 parent_backport_id,
             )
-            if not backport_id:
+            if backport_id:
                 write_patch(project_name, cve_id, backport_id)
             else:
                 print("backport_id is empty, no real patch")
