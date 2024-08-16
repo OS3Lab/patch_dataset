@@ -1,0 +1,1 @@
+git clone https://github.com/qt/qtbase.git $SRC
