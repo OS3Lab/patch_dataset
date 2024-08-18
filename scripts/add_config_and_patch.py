@@ -14,6 +14,9 @@ proj_url_map = {
     "glibc": "https://sourceware.org/git/?p=glibc.git",
     "linux": "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/",
     "qt": "https://github.com/qt/qtbase",
+    "electron": "https://github.com/electron/electron",
+    "grpc": "https://github.com/grpc/grpc",
+    "krb5": "https://github.com/krb5/krb5",
 }
 
 proj_commit_map = {
@@ -21,6 +24,9 @@ proj_commit_map = {
     "glibc": "https://sourceware.org/git/?p=glibc.git;a=commit;h=",
     "linux": "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/commit?id=",
     "qt": "https://github.com/qt/qtbase/commit/",
+    "electron": "https://github.com/electron/electron/commit/",
+    "grpc": "https://github.com/grpc/grpc/commit/",
+    "krb5": "https://github.com/krb5/krb5/commit/",
 }
 
 # proj 与 patch_dataset 文件夹的相对路径
@@ -29,6 +35,9 @@ proj_path_map = {
     "glibc": "../../LLM_Backport/source-project/glibc",
     "linux": "../../LLM_Backport/source-project/linux-stable",
     "qt": "../../LLM_Backport/source-project/qtbase",
+    "electron": "../../LLM_Backport/source-project/electron",
+    "grpc": "../../LLM_Backport/source-project/grpc",
+    "krb5": "../../LLM_Backport/source-project/krb5",
 }
 
 
@@ -171,6 +180,9 @@ def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Pro
         "ffmpeg": Github,
         "linux": Kernel,
         "qt": Github,
+        "electron": Github,
+        "grpc": Github,
+        "krb5": Github,
     }
     project_class = project_classes.get(proj_name)
     if project_class:
