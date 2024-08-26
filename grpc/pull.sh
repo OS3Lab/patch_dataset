@@ -1,1 +1,1 @@
-git clone https://github.com/grpc/grpc.git $SRC
+git clone --recurse-submodules https://github.com/grpc/grpc.git $SRC
