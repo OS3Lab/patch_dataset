@@ -1,0 +1,1 @@
+git clone https://github.com/hashicorp/nomad.git $SRC
