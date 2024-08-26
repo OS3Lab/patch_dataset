@@ -18,6 +18,8 @@ proj_url_map = {
     "grpc": "https://github.com/grpc/grpc",
     "krb5": "https://github.com/krb5/krb5",
     "argocd": "https://github.com/argoproj/argo-cd",
+    "etcd": "https://github.com/etcd-io/etcd",
+    "consul": "https://github.com/hashicorp/consul",
 }
 
 proj_commit_map = {
@@ -29,6 +31,8 @@ proj_commit_map = {
     "grpc": "https://github.com/grpc/grpc/commit/",
     "krb5": "https://github.com/krb5/krb5/commit/",
     "argocd": "https://github.com/argoproj/argo-cd/commit/",
+    "etcd": "https://github.com/etcd-io/etcd/commit/",
+    "consul": "https://github.com/hashicorp/consul/commit/",
 }
 
 # proj 与 patch_dataset 文件夹的相对路径
@@ -41,6 +45,8 @@ proj_path_map = {
     "grpc": "../../LLM_Backport/source-project/grpc",
     "krb5": "../../LLM_Backport/source-project/krb5",
     "argocd": "argocd/argo-cd",
+    "etcd": "etcd/etcd",
+    "consul": "consul/consul",
 }
 
 
@@ -187,6 +193,8 @@ def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Pro
         "grpc": Github,
         "krb5": Github,
         "argocd": Github,
+        "etcd": Github,
+        "consul": Github,
     }
     project_class = project_classes.get(proj_name)
     if project_class:
