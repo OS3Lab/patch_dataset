@@ -23,6 +23,7 @@ proj_url_map = {
     "nomad": "https://github.com/hashicorp/nomad",
     "moby": "https://github.com/moby/moby",
     "vault": "https://github.com/hashicorp/vault",
+    "containerd": "https://github.com/containerd/containerd",
 }
 
 proj_commit_map = {
@@ -39,6 +40,7 @@ proj_commit_map = {
     "nomad": "https://github.com/hashicorp/nomad/commit/",
     "moby": "https://github.com/moby/moby/commit/",
     "vault": "https://github.com/hashicorp/vault/commit/",
+    "containerd": "https://github.com/containerd/containerd/commit/",
 }
 
 # proj 与 patch_dataset 文件夹的相对路径
@@ -56,6 +58,7 @@ proj_path_map = {
     "nomad": "../../LLM_Backport/source-project/nomad",
     "moby": "../../LLM_Backport/source-project/moby",
     "vault": "vault/vault",
+    "containerd": "containerd/containerd",
 }
 
 
@@ -207,6 +210,7 @@ def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Pro
         "nomad": Github,
         "moby": Github,
         "vault": Github,
+        "containerd": Github,
     }
     project_class = project_classes.get(proj_name)
     if project_class:
