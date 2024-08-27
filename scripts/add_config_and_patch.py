@@ -24,6 +24,7 @@ proj_url_map = {
     "moby": "https://github.com/moby/moby",
     "vault": "https://github.com/hashicorp/vault",
     "containerd": "https://github.com/containerd/containerd",
+    "golang": "https://github.com/golang/go",
 }
 
 proj_commit_map = {
@@ -41,6 +42,7 @@ proj_commit_map = {
     "moby": "https://github.com/moby/moby/commit/",
     "vault": "https://github.com/hashicorp/vault/commit/",
     "containerd": "https://github.com/containerd/containerd/commit/",
+    "golang": "https://github.com/golang/go/commit/",
 }
 
 # proj 与 patch_dataset 文件夹的相对路径
@@ -59,6 +61,7 @@ proj_path_map = {
     "moby": "../../LLM_Backport/source-project/moby",
     "vault": "vault/vault",
     "containerd": "containerd/containerd",
+    "golang": "../../LLM_Backport/source-project/go",
 }
 
 
@@ -211,6 +214,7 @@ def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Pro
         "moby": Github,
         "vault": Github,
         "containerd": Github,
+        "golang": Github,
     }
     project_class = project_classes.get(proj_name)
     if project_class:
