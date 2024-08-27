@@ -21,6 +21,7 @@ proj_url_map = {
     "etcd": "https://github.com/etcd-io/etcd",
     "consul": "https://github.com/hashicorp/consul",
     "nomad": "https://github.com/hashicorp/nomad",
+    "moby": "https://github.com/moby/moby",
 }
 
 proj_commit_map = {
@@ -35,6 +36,7 @@ proj_commit_map = {
     "etcd": "https://github.com/etcd-io/etcd/commit/",
     "consul": "https://github.com/hashicorp/consul/commit/",
     "nomad": "https://github.com/hashicorp/nomad/commit/",
+    "moby": "https://github.com/moby/moby/commit/",
 }
 
 # proj 与 patch_dataset 文件夹的相对路径
@@ -50,6 +52,7 @@ proj_path_map = {
     "etcd": "etcd/etcd",
     "consul": "consul/consul",
     "nomad": "../../LLM_Backport/source-project/nomad",
+    "moby": "../../LLM_Backport/source-project/moby",
 }
 
 
@@ -199,6 +202,7 @@ def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Pro
         "etcd": Github,
         "consul": Github,
         "nomad": Github,
+        "moby": Github,
     }
     project_class = project_classes.get(proj_name)
     if project_class:
