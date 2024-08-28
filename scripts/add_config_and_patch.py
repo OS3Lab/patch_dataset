@@ -30,6 +30,7 @@ proj_url_map = {
     "cilium": "https://github.com/cilium/cilium",
     "go-jose": "https://github.com/go-jose/go-jose",
     "buildkit": "https://github.com/moby/buildkit",
+    "mattermost": "https://github.com/mattermost/mattermost",
 }
 
 proj_commit_map = {
@@ -53,6 +54,7 @@ proj_commit_map = {
     "cilium": "https://github.com/cilium/cilium/commit/",
     "go-jose": "https://github.com/go-jose/go-jose/commit/",
     "buildkit": "https://github.com/moby/buildkit/commit/",
+    "mattermost": "https://github.com/mattermost/mattermost/commit/",
 }
 
 # proj 与 patch_dataset 文件夹的相对路径
@@ -77,6 +79,7 @@ proj_path_map = {
     "cilium": "cilium/cilium",
     "go-jose": "go-jose/go-jose",
     "buildkit": "buildkit/buildkit",
+    "mattermost": "mattermost/mattermost",
 }
 
 
@@ -235,6 +238,7 @@ def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Pro
         "cilium": Github,
         "go-jose": Github,
         "buildkit": Github,
+        "mattermost": Github,
     }
     project_class = project_classes.get(proj_name)
     if project_class:
