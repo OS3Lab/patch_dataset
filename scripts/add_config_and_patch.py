@@ -25,6 +25,8 @@ proj_url_map = {
     "vault": "https://github.com/hashicorp/vault",
     "containerd": "https://github.com/containerd/containerd",
     "golang": "https://github.com/golang/go",
+    "grafana": "https://github.com/grafana/grafana",
+    "dapr": "https://github.com/dapr/dapr",
 }
 
 proj_commit_map = {
@@ -43,6 +45,8 @@ proj_commit_map = {
     "vault": "https://github.com/hashicorp/vault/commit/",
     "containerd": "https://github.com/containerd/containerd/commit/",
     "golang": "https://github.com/golang/go/commit/",
+    "grafana": "https://github.com/grafana/grafana/commit/",
+    "dapr": "https://github.com/dapr/dapr/commit/",
 }
 
 # proj 与 patch_dataset 文件夹的相对路径
@@ -62,6 +66,8 @@ proj_path_map = {
     "vault": "vault/vault",
     "containerd": "containerd/containerd",
     "golang": "../../LLM_Backport/source-project/go",
+    "grafana": "grafana/grafana",
+    "dapr": "dapr/dapr",
 }
 
 
@@ -215,6 +221,8 @@ def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Pro
         "vault": Github,
         "containerd": Github,
         "golang": Github,
+        "grafana": Github,
+        "dapr": Github,
     }
     project_class = project_classes.get(proj_name)
     if project_class:
