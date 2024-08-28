@@ -27,6 +27,9 @@ proj_url_map = {
     "golang": "https://github.com/golang/go",
     "grafana": "https://github.com/grafana/grafana",
     "dapr": "https://github.com/dapr/dapr",
+    "cilium": "https://github.com/cilium/cilium",
+    "go-jose": "https://github.com/go-jose/go-jose",
+    "buildkit": "https://github.com/moby/buildkit",
 }
 
 proj_commit_map = {
@@ -47,6 +50,9 @@ proj_commit_map = {
     "golang": "https://github.com/golang/go/commit/",
     "grafana": "https://github.com/grafana/grafana/commit/",
     "dapr": "https://github.com/dapr/dapr/commit/",
+    "cilium": "https://github.com/cilium/cilium/commit/",
+    "go-jose": "https://github.com/go-jose/go-jose/commit/",
+    "buildkit": "https://github.com/moby/buildkit/commit/",
 }
 
 # proj 与 patch_dataset 文件夹的相对路径
@@ -68,6 +74,9 @@ proj_path_map = {
     "golang": "../../LLM_Backport/source-project/go",
     "grafana": "grafana/grafana",
     "dapr": "dapr/dapr",
+    "cilium": "cilium/cilium",
+    "go-jose": "go-jose/go-jose",
+    "buildkit": "buildkit/buildkit",
 }
 
 
@@ -223,6 +232,9 @@ def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Pro
         "golang": Github,
         "grafana": Github,
         "dapr": Github,
+        "cilium": Github,
+        "go-jose": Github,
+        "buildkit": Github,
     }
     project_class = project_classes.get(proj_name)
     if project_class:
