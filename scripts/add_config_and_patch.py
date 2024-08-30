@@ -1,7 +1,10 @@
 # 输入：data.csv
-# CVE-2022-3964, ffmpeg, 92f9b28ed84a77138105475beba16c146bdaf984, ad28b01a141703b831256b712e0613281b15fcf0
+# 输入示例：CVE-2022-3964, ffmpeg, 92f9b28ed84a77138105475beba16c146bdaf984, ad28b01a141703b831256b712e0613281b15fcf0
+#          填写 commit id 或者 commit url 均可
 
 # 输出：部分填好的 cfg 文件（包括 new_patch_parent, target_release），使用 git format-patch 生成的 real.patch 文件
+
+# 填写添加了 HACK 注释的地方
 
 import os
 import re
@@ -9,6 +12,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 
+# HACK: proj url，必填
 proj_url_map = {
     "ffmpeg": "https://github.com/FFmpeg/FFmpeg",
     "glibc": "https://sourceware.org/git/?p=glibc.git",
@@ -33,31 +37,14 @@ proj_url_map = {
     "mattermost": "https://github.com/mattermost/mattermost",
 }
 
+# HACK: proj commit url，如果是 github proj 则不用写
 proj_commit_map = {
     "ffmpeg": "https://github.com/FFmpeg/FFmpeg/commit/",
     "glibc": "https://sourceware.org/git/?p=glibc.git;a=commit;h=",
     "linux": "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/commit?id=",
-    "qt": "https://github.com/qt/qtbase/commit/",
-    "electron": "https://github.com/electron/electron/commit/",
-    "grpc": "https://github.com/grpc/grpc/commit/",
-    "krb5": "https://github.com/krb5/krb5/commit/",
-    "argocd": "https://github.com/argoproj/argo-cd/commit/",
-    "etcd": "https://github.com/etcd-io/etcd/commit/",
-    "consul": "https://github.com/hashicorp/consul/commit/",
-    "nomad": "https://github.com/hashicorp/nomad/commit/",
-    "moby": "https://github.com/moby/moby/commit/",
-    "vault": "https://github.com/hashicorp/vault/commit/",
-    "containerd": "https://github.com/containerd/containerd/commit/",
-    "golang": "https://github.com/golang/go/commit/",
-    "grafana": "https://github.com/grafana/grafana/commit/",
-    "dapr": "https://github.com/dapr/dapr/commit/",
-    "cilium": "https://github.com/cilium/cilium/commit/",
-    "go-jose": "https://github.com/go-jose/go-jose/commit/",
-    "buildkit": "https://github.com/moby/buildkit/commit/",
-    "mattermost": "https://github.com/mattermost/mattermost/commit/",
 }
 
-# proj 与 patch_dataset 文件夹的相对路径
+# HACK: proj 与 patch_dataset 文件夹的相对路径，必填
 proj_path_map = {
     "ffmpeg": "../../LLM_Backport/source-project/FFmpeg",
     "glibc": "../../LLM_Backport/source-project/glibc",
@@ -82,6 +69,8 @@ proj_path_map = {
     "mattermost": "mattermost/mattermost",
 }
 
+support_proj = set(proj_url_map.keys()) & set(proj_path_map.keys())
+
 
 def write_patch(proj_name, cve_id, backport_id):
     """
@@ -105,7 +94,7 @@ def write_patch(proj_name, cve_id, backport_id):
 
     # 切换到 project，生成 patch 文件到 patch_dataset/proj_name/cve
     dataset_abs_path = os.getcwd()
-    proj_abs_path = os.path.abspath(proj_path_map[proj_name])
+    proj_abs_path = os.path.abspath(proj_path_map.get(proj_name))
     os.chdir(proj_abs_path)
     os.system(
         "git format-patch -1 %s -o %s"
@@ -218,32 +207,15 @@ class Kernel(Project):
 
 
 def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Project:
+    # HACK: proj 类，如果是 github 则不用写
     project_classes = {
-        "ffmpeg": Github,
         "linux": Kernel,
-        "qt": Github,
-        "electron": Github,
-        "grpc": Github,
-        "krb5": Github,
-        "argocd": Github,
-        "etcd": Github,
-        "consul": Github,
-        "nomad": Github,
-        "moby": Github,
-        "vault": Github,
-        "containerd": Github,
-        "golang": Github,
-        "grafana": Github,
-        "dapr": Github,
-        "cilium": Github,
-        "go-jose": Github,
-        "buildkit": Github,
-        "mattermost": Github,
     }
-    project_class = project_classes.get(proj_name)
-    if project_class:
-        return project_class(csv_data, commit_url_prefix)
-    raise ValueError(f"Unsupported project name: {proj_name}")
+    if proj_name not in support_proj:
+        raise ValueError(f"Unsupported project name: {proj_name}")
+
+    project_class = project_classes.get(proj_name, Github)
+    return project_class(csv_data, commit_url_prefix)
 
 
 # 处理每一行数据
@@ -267,7 +239,9 @@ def main():
         for line in lines:
             cve_id, project_name, release, backport = line.strip().split(",")
             project_url = proj_url_map.get(project_name)
-            proj_commit_url = proj_commit_map.get(project_name)
+            proj_commit_url = proj_commit_map.get(
+                project_name, project_url + "/commit/"
+            )
 
             release_id, parent_release_id, backport_id, parent_backport_id = (
                 process_project_line(project_name, release, backport, proj_commit_url)
