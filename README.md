@@ -4,9 +4,7 @@ Patch dataset for backporting.
 
 ## Intro
 
-​	Full information on patches in the dataset can be found in [Dataset_config.xlsx](./Dataset_config.xlsx)
-
-​	For each patch case, we use the naming form `<project_name>/<CVE-ID>` to store it in the corresponding folder. For example: [libtiff/CVE-2022-3597](./libtiff\CVE-2022-3597).
+​	For each patch case, we use the naming form `<project_name>/<CVE-ID>` to store it in the corresponding folder. For example: [libtiff/CVE-2022-3597](./libtiff/CVE-2022-3597).
 
 ​	Under the folder, the structure is roughly as follows:
 
