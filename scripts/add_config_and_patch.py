@@ -9,8 +9,6 @@
 import os
 import re
 
-import requests
-from bs4 import BeautifulSoup
 
 # HACK: proj url，必填
 proj_url_map = {
@@ -171,9 +169,6 @@ class Project:
     def extract_commit_id(self, csv_data: str) -> str:
         raise NotImplementedError("Subclasses should implement this method")
 
-    def get_parent(self) -> str:
-        raise NotImplementedError("Subclasses should implement this method")
-
 
 class Github(Project):
     def extract_commit_id(self, csv_data: str) -> str:
@@ -181,29 +176,12 @@ class Github(Project):
             return re.search(r"/commit/([a-z0-9]*)", csv_data).group(1)
         return csv_data
 
-    def get_parent(self) -> str:
-        response = requests.get(self.commit_url)
-        soup = BeautifulSoup(response.text, "html.parser")
-        elements = soup.find_all(class_="sha-block ml-0")
-        for element in elements:
-            return element.find_all("a")[0]["href"].split("/")[-1]
-
 
 class Kernel(Project):
     def extract_commit_id(self, csv_data: str) -> str:
         if "https:" in csv_data:
             return re.search(r"\?id=([a-z0-9]*)", csv_data).group(1)
         return csv_data
-
-    def get_parent(self) -> str:
-        response = requests.get(self.commit_url)
-        soup = BeautifulSoup(response.text, "html.parser")
-        parent_th = soup.find("th", string="parent")
-        if parent_th:
-            parent_tr = parent_th.find_parent("tr")
-            if parent_tr:
-                link = parent_tr.find("a")["href"]
-                return link.split("/")[-1].replace("?id=", "")
 
 
 def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Project:
@@ -222,11 +200,11 @@ def create_project(proj_name: str, csv_data: str, commit_url_prefix: str) -> Pro
 def process_project_line(project_name, release, backport, proj_commit_url):
     handler = create_project(project_name, release, proj_commit_url)
     release_id = handler.commit_id
-    parent_release_id = handler.get_parent()
+    parent_release_id = handler.commit_id + "^"
 
     handler = create_project(project_name, backport, proj_commit_url)
     backport_id = handler.commit_id
-    parent_backport_id = handler.get_parent()
+    parent_backport_id = handler.commit_id + "^"
 
     return release_id, parent_release_id, backport_id, parent_backport_id
 
