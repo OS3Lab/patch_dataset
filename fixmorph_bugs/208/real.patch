@@ -1,0 +1,37 @@
+From 4bbe571cd9552b96303e0228818f9d002065e85b Mon Sep 17 00:00:00 2001
+From: Alex Hung <alex.hung@canonical.com>
+Date: Fri, 27 May 2016 15:47:06 +0800
+Subject: [PATCH] ACPI / video: skip evaluating _DOD when it does not exist
+
+commit e34fbbac669de0b7fb7803929d0477f35f6e2833 upstream.
+
+Some system supports hybrid graphics and its discrete VGA
+does not have any connectors and therefore has no _DOD method.
+
+Signed-off-by: Alex Hung <alex.hung@canonical.com>
+Reviewed-by: Aaron Lu <aaron.lu@intel.com>
+Signed-off-by: Rafael J. Wysocki <rafael.j.wysocki@intel.com>
+Cc: Sumit Semwal <sumit.semwal@linaro.org>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+Signed-off-by: Willy Tarreau <w@1wt.eu>
+---
+ drivers/acpi/video.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/acpi/video.c b/drivers/acpi/video.c
+index 0dc9ff61d7c2..e3ecaf4d64f4 100644
+--- a/drivers/acpi/video.c
++++ b/drivers/acpi/video.c
+@@ -1263,6 +1263,9 @@ static int acpi_video_device_enumerate(struct acpi_video_bus *video)
+ 	union acpi_object *dod = NULL;
+ 	union acpi_object *obj;
+ 
++	if (!video->cap._DOD)
++		return AE_NOT_EXIST;
++
+ 	status = acpi_evaluate_object(video->device->handle, "_DOD", NULL, &buffer);
+ 	if (!ACPI_SUCCESS(status)) {
+ 		ACPI_EXCEPTION((AE_INFO, status, "Evaluating _DOD"));
+-- 
+2.43.0
+

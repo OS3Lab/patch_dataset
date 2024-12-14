@@ -1,0 +1,42 @@
+From ae64b688736b2aa3861ca02792b69041676329a2 Mon Sep 17 00:00:00 2001
+From: Oliver Neukum <oneukum@suse.com>
+Date: Tue, 27 Oct 2015 09:51:34 -0200
+Subject: [PATCH] usbvision fix overflow of interfaces array
+
+commit 588afcc1c0e45358159090d95bf7b246fb67565f upstream.
+
+This fixes the crash reported in:
+http://seclists.org/bugtraq/2015/Oct/35
+The interface number needs a sanity check.
+
+Signed-off-by: Oliver Neukum <oneukum@suse.com>
+Cc: Vladis Dronov <vdronov@redhat.com>
+Signed-off-by: Hans Verkuil <hans.verkuil@cisco.com>
+Signed-off-by: Mauro Carvalho Chehab <mchehab@osg.samsung.com>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/media/video/usbvision/usbvision-video.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/media/video/usbvision/usbvision-video.c b/drivers/media/video/usbvision/usbvision-video.c
+index 42cf403f7963..20787d6ceeaf 100644
+--- a/drivers/media/video/usbvision/usbvision-video.c
++++ b/drivers/media/video/usbvision/usbvision-video.c
+@@ -1502,6 +1502,13 @@ static int __devinit usbvision_probe(struct usb_interface *intf,
+ 	printk(KERN_INFO "%s: %s found\n", __func__,
+ 				usbvision_device_data[model].model_string);
+ 
++	/*
++	 * this is a security check.
++	 * an exploit using an incorrect bInterfaceNumber is known
++	 */
++	if (ifnum >= USB_MAXINTERFACES || !dev->actconfig->interface[ifnum])
++		return -ENODEV;
++
+ 	if (usbvision_device_data[model].interface >= 0)
+ 		interface = &dev->actconfig->interface[usbvision_device_data[model].interface]->altsetting[0];
+ 	else
+-- 
+2.43.0
+

@@ -1,0 +1,49 @@
+From 6addf2c8f4571d3ce4c539d01d83051107abd229 Mon Sep 17 00:00:00 2001
+From: Jani Nikula <jani.nikula@intel.com>
+Date: Thu, 28 Sep 2017 11:21:57 +0300
+Subject: [PATCH] drm/i915/bios: parse DDI ports also for CHV for HDMI DDC pin
+ and DP AUX channel
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+commit 348e4058ebf53904e817eec7a1b25327143c2ed2 upstream.
+
+While technically CHV isn't DDI, we do look at the VBT based DDI port
+info for HDMI DDC pin and DP AUX channel. (We call these "alternate",
+but they're really just something that aren't platform defaults.)
+
+In commit e4ab73a13291 ("drm/i915: Respect alternate_ddc_pin for all DDI
+ports") Ville writes, "IIRC there may be CHV system that might actually
+need this."
+
+I'm not sure why there couldn't be even more platforms that need this,
+but start conservative, and parse the info for CHV in addition to DDI.
+
+Bugzilla: https://bugs.freedesktop.org/show_bug.cgi?id=100553
+Reported-by: Marek Wilczewski <mw@3cte.pl>
+Reviewed-by: Ville Syrjälä <ville.syrjala@linux.intel.com>
+Signed-off-by: Jani Nikula <jani.nikula@intel.com>
+Link: https://patchwork.freedesktop.org/patch/msgid/d0815082cb98487618429b62414854137049b888.1506586821.git.jani.nikula@intel.com
+[bwh: Backported to 3.16: IS_CHERRYVIEW() takes a drm_device pointer]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/gpu/drm/i915/intel_bios.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/i915/intel_bios.c b/drivers/gpu/drm/i915/intel_bios.c
+index e03526a10340..367a1ab8e7ca 100644
+--- a/drivers/gpu/drm/i915/intel_bios.c
++++ b/drivers/gpu/drm/i915/intel_bios.c
+@@ -1007,7 +1007,7 @@ static void parse_ddi_ports(struct drm_i915_private *dev_priv,
+ 	struct drm_device *dev = dev_priv->dev;
+ 	enum port port;
+ 
+-	if (!HAS_DDI(dev))
++	if (!HAS_DDI(dev) && !IS_CHERRYVIEW(dev))
+ 		return;
+ 
+ 	if (!dev_priv->vbt.child_dev_num)
+-- 
+2.43.0
+

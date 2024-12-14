@@ -1,0 +1,51 @@
+From 2fb15bd13fe1ad95a94cf0fc923d97f7c0af6e60 Mon Sep 17 00:00:00 2001
+From: Mauro Carvalho Chehab <mchehab@osg.samsung.com>
+Date: Wed, 3 Feb 2016 17:33:48 -0200
+Subject: [PATCH] tda1004x: only update the frontend properties if locked
+
+commit e8beb02343e7582980c6705816cd957cf4f74c7a upstream.
+
+The tda1004x was updating the properties cache before locking.
+If the device is not locked, the data at the registers are just
+random values with no real meaning.
+
+This caused the driver to fail with libdvbv5, as such library
+calls GET_PROPERTY from time to time, in order to return the
+DVB stats.
+
+Tested with a saa7134 card 78:
+	ASUSTeK P7131 Dual, vendor PCI ID: 1043:4862
+
+Signed-off-by: Mauro Carvalho Chehab <mchehab@osg.samsung.com>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/media/dvb/frontends/tda1004x.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/drivers/media/dvb/frontends/tda1004x.c b/drivers/media/dvb/frontends/tda1004x.c
+index ea485d923550..7a8b7dbc048b 100644
+--- a/drivers/media/dvb/frontends/tda1004x.c
++++ b/drivers/media/dvb/frontends/tda1004x.c
+@@ -898,9 +898,18 @@ static int tda1004x_set_fe(struct dvb_frontend* fe,
+ static int tda1004x_get_fe(struct dvb_frontend* fe, struct dvb_frontend_parameters *fe_params)
+ {
+ 	struct tda1004x_state* state = fe->demodulator_priv;
++	int status;
+ 
+ 	dprintk("%s\n", __func__);
+ 
++	status = tda1004x_read_byte(state, TDA1004X_STATUS_CD);
++	if (status == -1)
++		return -EIO;
++
++	/* Only update the properties cache if device is locked */
++	if (!(status & 8))
++		return 0;
++
+ 	// inversion status
+ 	fe_params->inversion = INVERSION_OFF;
+ 	if (tda1004x_read_byte(state, TDA1004X_CONFC1) & 0x20)
+-- 
+2.43.0
+

@@ -1,0 +1,40 @@
+From 9434e4855e90d2af3751cd93b47b4a3e40bc2dc1 Mon Sep 17 00:00:00 2001
+From: Trond Myklebust <trond.myklebust@primarydata.com>
+Date: Sat, 29 Aug 2015 13:36:30 -0700
+Subject: [PATCH] SUNRPC: xs_reset_transport must mark the connection as
+ disconnected
+
+commit 0c78789e3a030615c6650fde89546cadf40ec2cc upstream.
+
+In case the reconnection attempt fails.
+
+Signed-off-by: Trond Myklebust <trond.myklebust@primarydata.com>
+[bwh: Backported to 3.2: add local variable xprt]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ net/sunrpc/xprtsock.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/net/sunrpc/xprtsock.c b/net/sunrpc/xprtsock.c
+index d77a4f0a4210..3a82fec8f7e1 100644
+--- a/net/sunrpc/xprtsock.c
++++ b/net/sunrpc/xprtsock.c
+@@ -811,6 +811,7 @@ static void xs_reset_transport(struct sock_xprt *transport)
+ {
+ 	struct socket *sock = transport->sock;
+ 	struct sock *sk = transport->inet;
++	struct rpc_xprt *xprt = &transport->xprt;
+ 
+ 	if (sk == NULL)
+ 		return;
+@@ -824,6 +825,7 @@ static void xs_reset_transport(struct sock_xprt *transport)
+ 	sk->sk_user_data = NULL;
+ 
+ 	xs_restore_old_callbacks(transport, sk);
++	xprt_clear_connected(xprt);
+ 	write_unlock_bh(&sk->sk_callback_lock);
+ 
+ 	sk->sk_no_check = 0;
+-- 
+2.43.0
+

@@ -1,0 +1,46 @@
+From a1907fd0fa85339ac0b4fba6c30c46e339f27196 Mon Sep 17 00:00:00 2001
+From: Hans Verkuil <hverkuil-cisco@xs4all.nl>
+Date: Wed, 28 Nov 2018 03:37:43 -0500
+Subject: [PATCH] media: vb2: don't call __vb2_queue_cancel if
+ vb2_start_streaming failed
+
+commit 04990215dec43c424daff00d1f622167b8aafd1f upstream.
+
+vb2_start_streaming() already rolls back the buffers, so there is no
+need to call __vb2_queue_cancel(). Especially since __vb2_queue_cancel()
+does too much, such as zeroing the q->queued_count value, causing vb2
+to think that no buffers have been queued.
+
+It appears that this call to __vb2_queue_cancel() is a left-over from
+before commit b3379c6201bb3.
+
+Fixes: b3379c6201bb3 ('vb2: only call start_streaming if sufficient buffers are queued')
+
+Signed-off-by: Hans Verkuil <hverkuil-cisco@xs4all.nl>
+Acked-by: Sakari Ailus <sakari.ailus@linux.intel.com>
+Signed-off-by: Mauro Carvalho Chehab <mchehab+samsung@kernel.org>
+[bwh: Backported to 3.16: adjust filename, context]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/media/v4l2-core/videobuf2-core.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/drivers/media/v4l2-core/videobuf2-core.c b/drivers/media/v4l2-core/videobuf2-core.c
+index ee8b697972bb..b259d08971ee 100644
+--- a/drivers/media/v4l2-core/videobuf2-core.c
++++ b/drivers/media/v4l2-core/videobuf2-core.c
+@@ -2200,10 +2200,8 @@ static int vb2_internal_streamon(struct vb2_queue *q, enum v4l2_buf_type type)
+ 	 */
+ 	if (q->queued_count >= q->min_buffers_needed) {
+ 		ret = vb2_start_streaming(q);
+-		if (ret) {
+-			__vb2_queue_cancel(q);
++		if (ret)
+ 			return ret;
+-		}
+ 	}
+ 
+ 	q->streaming = 1;
+-- 
+2.43.0
+

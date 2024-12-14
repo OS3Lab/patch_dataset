@@ -1,0 +1,43 @@
+From 7a8f94b0198aa17034da702f020411ad996f63e2 Mon Sep 17 00:00:00 2001
+From: Colin Ian King <colin.king@canonical.com>
+Date: Tue, 22 Aug 2017 10:21:20 -0400
+Subject: [PATCH] media: em28xx: calculate left volume level correctly
+
+commit 801e3659bf2c87c31b7024087d61e89e172b5651 upstream.
+
+The calculation of the left volume looks suspect, the value of
+0x1f - ((val << 8) & 0x1f) is always 0x1f. The debug prior to the
+assignment of value[1] prints the left volume setting using the
+calculation 0x1f - (val >> 8) & 0x1f which looks correct to me.
+Fix the left volume by using the correct expression as used in
+the debug.
+
+Detected by CoverityScan, CID#146140 ("Wrong operator used")
+
+Fixes: 850d24a5a861 ("[media] em28xx-alsa: add mixer support for AC97 volume controls")
+
+Signed-off-by: Colin Ian King <colin.king@canonical.com>
+Signed-off-by: Hans Verkuil <hansverk@cisco.com>
+Signed-off-by: Mauro Carvalho Chehab <mchehab@s-opensource.com>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/media/video/em28xx/em28xx-audio.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/video/em28xx/em28xx-audio.c b/drivers/media/video/em28xx/em28xx-audio.c
+index cff0768afbf5..e902bf571479 100644
+--- a/drivers/media/video/em28xx/em28xx-audio.c
++++ b/drivers/media/video/em28xx/em28xx-audio.c
+@@ -507,7 +507,7 @@ static int em28xx_vol_get(struct snd_kcontrol *kcontrol,
+ 		val, (int)kcontrol->private_value);
+ 
+ 	value->value.integer.value[0] = 0x1f - (val & 0x1f);
+-	value->value.integer.value[1] = 0x1f - ((val << 8) & 0x1f);
++	value->value.integer.value[1] = 0x1f - ((val >> 8) & 0x1f);
+ 
+ 	return 0;
+ }
+-- 
+2.43.0
+

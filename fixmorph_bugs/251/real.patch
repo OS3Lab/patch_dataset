@@ -1,0 +1,38 @@
+From 60bfb26f95813ca8c779fbc16ade031dc85f5394 Mon Sep 17 00:00:00 2001
+From: Eric Dumazet <edumazet@google.com>
+Date: Sun, 24 Jan 2016 13:53:50 -0800
+Subject: [PATCH] af_unix: fix struct pid memory leak
+
+commit fa0dc04df259ba2df3ce1920e9690c7842f8fa4b upstream.
+
+Dmitry reported a struct pid leak detected by a syzkaller program.
+
+Bug happens in unix_stream_recvmsg() when we break the loop when a
+signal is pending, without properly releasing scm.
+
+Fixes: b3ca9b02b007 ("net: fix multithreaded signal handling in unix recv routines")
+Reported-by: Dmitry Vyukov <dvyukov@google.com>
+Signed-off-by: Eric Dumazet <edumazet@google.com>
+Cc: Rainer Weikusat <rweikusat@mobileactivedefense.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+[bwh: Backported to 3.2: cookie is *sicob->scm, not scm]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ net/unix/af_unix.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/net/unix/af_unix.c b/net/unix/af_unix.c
+index 30a8899388d2..6cb363d2b894 100644
+--- a/net/unix/af_unix.c
++++ b/net/unix/af_unix.c
+@@ -2100,6 +2100,7 @@ static int unix_stream_recvmsg(struct kiocb *iocb, struct socket *sock,
+ 
+ 			if (signal_pending(current)) {
+ 				err = sock_intr_errno(timeo);
++				scm_destroy(siocb->scm);
+ 				goto out;
+ 			}
+ 
+-- 
+2.43.0
+

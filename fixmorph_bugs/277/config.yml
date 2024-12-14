@@ -1,0 +1,8 @@
+project: fixmorph_bugs
+project_url: https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/
+new_patch: 05fbf357d94152171bc50f8a369390f1f16efd89
+new_patch_parent: 05fbf357d94152171bc50f8a369390f1f16efd89^
+target_release: fdfce812d2c6bd0c1eb6ccd3196fe34b5e293c6b
+sanitizer: 
+error_message: 
+tag: 277

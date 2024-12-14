@@ -1,0 +1,69 @@
+From 37f4f9e677576c8f8add9f43844c6c468caf8252 Mon Sep 17 00:00:00 2001
+From: Al Viro <viro@zeniv.linux.org.uk>
+Date: Tue, 7 Jun 2016 21:26:55 -0400
+Subject: [PATCH] fix d_walk()/non-delayed __d_free() race
+
+commit 3d56c25e3bb0726a5c5e16fc2d9e38f8ed763085 upstream.
+
+Ascend-to-parent logics in d_walk() depends on all encountered child
+dentries not getting freed without an RCU delay.  Unfortunately, in
+quite a few cases it is not true, with hard-to-hit oopsable race as
+the result.
+
+Fortunately, the fix is simiple; right now the rule is "if it ever
+been hashed, freeing must be delayed" and changing it to "if it
+ever had a parent, freeing must be delayed" closes that hole and
+covers all cases the old rule used to cover.  Moreover, pipes and
+sockets remain _not_ covered, so we do not introduce RCU delay in
+the cases which are the reason for having that delay conditional
+in the first place.
+
+Signed-off-by: Al Viro <viro@zeniv.linux.org.uk>
+[bwh: Backported to 3.2:
+ - Adjust context
+ - Also set the flag in __d_materialise_dentry())]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ fs/dcache.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/fs/dcache.c b/fs/dcache.c
+index 46265f58b5b8..01c68ae3129c 100644
+--- a/fs/dcache.c
++++ b/fs/dcache.c
+@@ -1261,7 +1261,7 @@ struct dentry *d_alloc(struct dentry * parent, const struct qstr *name)
+ 	struct dentry *dentry = __d_alloc(parent->d_sb, name);
+ 	if (!dentry)
+ 		return NULL;
+-
++	dentry->d_flags |= DCACHE_RCUACCESS;
+ 	spin_lock(&parent->d_lock);
+ 	/*
+ 	 * don't need child lock because it is not subject
+@@ -2011,7 +2011,6 @@ static void __d_rehash(struct dentry * entry, struct hlist_bl_head *b)
+ {
+ 	BUG_ON(!d_unhashed(entry));
+ 	hlist_bl_lock(b);
+-	entry->d_flags |= DCACHE_RCUACCESS;
+ 	hlist_bl_add_head_rcu(&entry->d_hash, b);
+ 	hlist_bl_unlock(b);
+ }
+@@ -2195,6 +2194,7 @@ static void __d_move(struct dentry * dentry, struct dentry * target)
+ 
+ 	/* ... and switch the parents */
+ 	if (IS_ROOT(dentry)) {
++		dentry->d_flags |= DCACHE_RCUACCESS;
+ 		dentry->d_parent = target->d_parent;
+ 		target->d_parent = target;
+ 		INIT_LIST_HEAD(&target->d_child);
+@@ -2311,6 +2311,7 @@ static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
+ 	switch_names(dentry, anon);
+ 	swap(dentry->d_name.hash, anon->d_name.hash);
+ 
++	dentry->d_flags |= DCACHE_RCUACCESS;
+ 	dentry->d_parent = (aparent == anon) ? dentry : aparent;
+ 	list_del(&dentry->d_child);
+ 	if (!IS_ROOT(dentry))
+-- 
+2.43.0
+

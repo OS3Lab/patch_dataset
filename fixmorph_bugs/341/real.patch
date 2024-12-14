@@ -1,0 +1,39 @@
+From 0ac694d9a0348c1698973a03946565e0debd137e Mon Sep 17 00:00:00 2001
+From: Miklos Szeredi <mszeredi@redhat.com>
+Date: Wed, 22 Feb 2017 20:08:25 +0100
+Subject: [PATCH] fuse: add missing FR_FORCE
+
+commit 2e38bea99a80eab408adee27f873a188d57b76cb upstream.
+
+fuse_file_put() was missing the "force" flag for the RELEASE request when
+sending synchronously (fuseblk).
+
+If this flag is not set, then a sync request may be interrupted before it
+is dequeued by the userspace filesystem.  In this case the OPEN won't be
+balanced with a RELEASE.
+
+Signed-off-by: Miklos Szeredi <mszeredi@redhat.com>
+Fixes: 5a18ec176c93 ("fuse: fix hang of single threaded fuseblk filesystem")
+[bwh: Backported to 3.2:
+ - "force" flag is a bitfield
+ - Adjust context]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ fs/fuse/file.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/fs/fuse/file.c b/fs/fuse/file.c
+index f507e62204b1..1f78f91dedc4 100644
+--- a/fs/fuse/file.c
++++ b/fs/fuse/file.c
+@@ -126,6 +126,7 @@ static void fuse_file_put(struct fuse_file *ff, bool sync)
+ 		struct fuse_req *req = ff->reserved_req;
+ 
+ 		if (sync) {
++			req->force = 1;
+ 			fuse_request_send(ff->fc, req);
+ 			path_put(&req->misc.release.path);
+ 			fuse_put_request(ff->fc, req);
+-- 
+2.43.0
+

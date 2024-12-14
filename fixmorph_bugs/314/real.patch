@@ -1,0 +1,64 @@
+From dc49f8416e27066d18b7e2561cf112087f4d4f53 Mon Sep 17 00:00:00 2001
+From: Song Hongyan <hongyan.song@intel.com>
+Date: Tue, 28 Mar 2017 22:23:55 +0800
+Subject: [PATCH] iio: hid-sensor-attributes: Fix sensor property setting
+ failure.
+
+commit bba6d9e47f3ea894e501f94b086a59ffe28241ac upstream.
+
+When system bootup without get sensor property, set sensor
+property will be fail.
+
+If no get_feature operation done before set_feature, the sensor
+properties will all be the initialized value, which is not the
+same with sensor real properties. When set sensor property it will
+write back to sensor the changed perperty data combines with other
+sensor properties data, it is not right and may be dangerous.
+
+In order to get all sensor properties, choose to read one of the sensor
+properties(no matter read any sensor peroperty, driver will get all
+the peroperties and return the requested one).
+
+Fixes: 73c6768b710a ("iio: hid-sensors: Common attribute and trigger")
+Signed-off-by: Song Hongyan <hongyan.song@intel.com>
+Acked-by: Srinivas Pandruvada <srinivas.pandruvada@linux.intel.com>
+Signed-off-by: Jonathan Cameron <jic23@kernel.org>
+[bwh: Backported to 3.16:
+ - sensor_hub_get_feature() doesn't take a 'buffer_size' parameter
+ - Adjust context]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/iio/common/hid-sensors/hid-sensor-attributes.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/drivers/iio/common/hid-sensors/hid-sensor-attributes.c b/drivers/iio/common/hid-sensors/hid-sensor-attributes.c
+index bd4b6e02a1cb..2494313b1008 100644
+--- a/drivers/iio/common/hid-sensors/hid-sensor-attributes.c
++++ b/drivers/iio/common/hid-sensors/hid-sensor-attributes.c
+@@ -363,6 +363,8 @@ int hid_sensor_parse_common_attributes(struct hid_sensor_hub_device *hsdev,
+ 					struct hid_sensor_common *st)
+ {
+ 
++	s32 value;
++	int ret;
+ 
+ 	hid_sensor_get_reporting_interval(hsdev, usage_id, st);
+ 
+@@ -387,6 +389,14 @@ int hid_sensor_parse_common_attributes(struct hid_sensor_hub_device *hsdev,
+ 			st->power_state.index, st->power_state.report_id,
+ 			st->sensitivity.index, st->sensitivity.report_id);
+ 
++	ret = sensor_hub_get_feature(hsdev,
++				st->power_state.report_id,
++				st->power_state.index, &value);
++	if (ret < 0)
++		return ret;
++	if (value < 0)
++		return -EINVAL;
++
+ 	return 0;
+ }
+ EXPORT_SYMBOL(hid_sensor_parse_common_attributes);
+-- 
+2.43.0
+

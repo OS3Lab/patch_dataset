@@ -1,0 +1,46 @@
+From 34680f6e90e31dae1dae9d599b3876b159e58332 Mon Sep 17 00:00:00 2001
+From: Larry Finger <Larry.Finger@lwfinger.net>
+Date: Mon, 14 Dec 2015 16:34:36 -0600
+Subject: [PATCH] rtlwifi: rtl8192se: Fix module parameter initialization
+
+commit 7503efbd82c15c4070adffff1344e5169d3634b4 upstream.
+
+Two of the module parameter descriptions show incorrect default values.
+In addition the value for software encryption is not transferred to
+the locations used by the driver.
+
+Signed-off-by: Larry Finger <Larry.Finger@lwfinger.net>
+Signed-off-by: Kalle Valo <kvalo@codeaurora.org>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/net/wireless/rtlwifi/rtl8192se/sw.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/wireless/rtlwifi/rtl8192se/sw.c b/drivers/net/wireless/rtlwifi/rtl8192se/sw.c
+index 92f49d522c56..a0e06142dc75 100644
+--- a/drivers/net/wireless/rtlwifi/rtl8192se/sw.c
++++ b/drivers/net/wireless/rtlwifi/rtl8192se/sw.c
+@@ -167,6 +167,8 @@ static int rtl92s_init_sw_vars(struct ieee80211_hw *hw)
+ 	rtlpriv->psc.inactiveps = rtlpriv->cfg->mod_params->inactiveps;
+ 	rtlpriv->psc.swctrl_lps = rtlpriv->cfg->mod_params->swctrl_lps;
+ 	rtlpriv->psc.fwctrl_lps = rtlpriv->cfg->mod_params->fwctrl_lps;
++	rtlpriv->cfg->mod_params->sw_crypto =
++		rtlpriv->cfg->mod_params->sw_crypto;
+ 	if (!rtlpriv->psc.inactiveps)
+ 		pr_info("rtl8192ce: Power Save off (module option)\n");
+ 	if (!rtlpriv->psc.fwctrl_lps)
+@@ -399,8 +401,8 @@ module_param_named(swlps, rtl92se_mod_params.swctrl_lps, bool, 0444);
+ module_param_named(fwlps, rtl92se_mod_params.fwctrl_lps, bool, 0444);
+ MODULE_PARM_DESC(swenc, "Set to 1 for software crypto (default 0)\n");
+ MODULE_PARM_DESC(ips, "Set to 0 to not use link power save (default 1)\n");
+-MODULE_PARM_DESC(swlps, "Set to 1 to use SW control power save (default 0)\n");
+-MODULE_PARM_DESC(fwlps, "Set to 1 to use FW control power save (default 1)\n");
++MODULE_PARM_DESC(swlps, "Set to 1 to use SW control power save (default 1)\n");
++MODULE_PARM_DESC(fwlps, "Set to 1 to use FW control power save (default 0)\n");
+ MODULE_PARM_DESC(debug, "Set debug level (0-5) (default 0)");
+ 
+ static const struct dev_pm_ops rtlwifi_pm_ops = {
+-- 
+2.43.0
+

@@ -1,0 +1,45 @@
+From 142f6a15a4f7e6c9cf3547f495ac314bcec906b6 Mon Sep 17 00:00:00 2001
+From: Mateusz Jurczyk <mjurczyk@google.com>
+Date: Wed, 7 Jun 2017 16:14:29 +0200
+Subject: [PATCH] decnet: dn_rtmsg: Improve input length sanitization in
+ dnrmg_receive_user_skb
+
+[ Upstream commit 85eac2ba35a2dbfbdd5767c7447a4af07444a5b4 ]
+
+Verify that the length of the socket buffer is sufficient to cover the
+entire nlh->nlmsg_len field before accessing that field for further
+input sanitization. If the client only supplies 1-3 bytes of data in
+sk_buff, then nlh->nlmsg_len remains partially uninitialized and
+contains leftover memory from the corresponding kernel allocation.
+Operating on such data may result in indeterminate evaluation of the
+nlmsg_len < sizeof(*nlh) expression.
+
+The bug was discovered by a runtime instrumentation designed to detect
+use of uninitialized memory in the kernel. The patch prevents this and
+other similar tools (e.g. KMSAN) from flagging this behavior in the future.
+
+Signed-off-by: Mateusz Jurczyk <mjurczyk@google.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+---
+ net/decnet/netfilter/dn_rtmsg.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/net/decnet/netfilter/dn_rtmsg.c b/net/decnet/netfilter/dn_rtmsg.c
+index af34fc9bdf69..2fe45762ca70 100644
+--- a/net/decnet/netfilter/dn_rtmsg.c
++++ b/net/decnet/netfilter/dn_rtmsg.c
+@@ -102,7 +102,9 @@ static inline void dnrmg_receive_user_skb(struct sk_buff *skb)
+ {
+ 	struct nlmsghdr *nlh = nlmsg_hdr(skb);
+ 
+-	if (nlh->nlmsg_len < sizeof(*nlh) || skb->len < nlh->nlmsg_len)
++	if (skb->len < sizeof(*nlh) ||
++	    nlh->nlmsg_len < sizeof(*nlh) ||
++	    skb->len < nlh->nlmsg_len)
+ 		return;
+ 
+ 	if (!netlink_capable(skb, CAP_NET_ADMIN))
+-- 
+2.43.0
+

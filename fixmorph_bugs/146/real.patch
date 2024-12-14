@@ -1,0 +1,37 @@
+From 5daa0af639b0be923694f1e12f3029f0562f8dfc Mon Sep 17 00:00:00 2001
+From: Brian Norris <computersforpeace@gmail.com>
+Date: Sat, 28 Feb 2015 02:23:25 -0800
+Subject: [PATCH] UBI: account for bitflips in both the VID header and data
+
+commit 8eef7d70f7c6772c3490f410ee2bceab3b543fa1 upstream.
+
+We are completely discarding the earlier value of 'bitflips', which
+could reflect a bitflip found in ubi_io_read_vid_hdr(). Let's use the
+bitwise OR of header and data 'bitflip' statuses instead.
+
+Coverity CID #1226856
+
+Signed-off-by: Brian Norris <computersforpeace@gmail.com>
+Signed-off-by: Richard Weinberger <richard@nod.at>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/mtd/ubi/scan.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/mtd/ubi/scan.c b/drivers/mtd/ubi/scan.c
+index b2b62dee93a0..c5b2357e7fed 100644
+--- a/drivers/mtd/ubi/scan.c
++++ b/drivers/mtd/ubi/scan.c
+@@ -408,7 +408,7 @@ static int compare_lebs(struct ubi_device *ubi, const struct ubi_scan_leb *seb,
+ 		second_is_newer = !second_is_newer;
+ 	} else {
+ 		dbg_bld("PEB %d CRC is OK", pnum);
+-		bitflips = !!err;
++		bitflips |= !!err;
+ 	}
+ 
+ 	vfree(buf);
+-- 
+2.43.0
+

@@ -1,0 +1,63 @@
+From fd15ac92bcc6276caccfe2e745b593b9a1d62dd9 Mon Sep 17 00:00:00 2001
+From: Guennadi Liakhovetski <g.liakhovetski@gmx.de>
+Date: Fri, 30 May 2014 20:26:38 -0300
+Subject: [PATCH] V4L2: fix VIDIOC_CREATE_BUFS 32-bit compatibility mode data
+ copy-back
+
+commit 6ed9b28504326f8cf542e6b68245b2f7ce009216 upstream.
+
+Similar to an earlier patch, fixing reading user-space data for the
+VIDIOC_CREATE_BUFS ioctl() in 32-bit compatibility mode, this patch fixes
+writing back of the possibly modified struct to the user. However, unlike
+the former bug, this one is much less harmful, because it only results in
+the kernel failing to write the .type field back to the user, but in fact
+this is likely unneeded, because the kernel will hardly want to change
+that field. Therefore this bug is more of a theoretical nature.
+
+Signed-off-by: Guennadi Liakhovetski <g.liakhovetski@gmx.de>
+Acked-by: Laurent Pinchart <laurent.pinchart@ideasonboard.com>
+Signed-off-by: Mauro Carvalho Chehab <mchehab@osg.samsung.com>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/media/video/v4l2-compat-ioctl32.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/media/video/v4l2-compat-ioctl32.c b/drivers/media/video/v4l2-compat-ioctl32.c
+index c7e02f9aac38..a36f16c1058f 100644
+--- a/drivers/media/video/v4l2-compat-ioctl32.c
++++ b/drivers/media/video/v4l2-compat-ioctl32.c
+@@ -226,6 +226,9 @@ static int get_v4l2_create32(struct v4l2_create_buffers *kp, struct v4l2_create_
+ 
+ static int __put_v4l2_format32(struct v4l2_format *kp, struct v4l2_format32 __user *up)
+ {
++	if (put_user(kp->type, &up->type))
++		return -EFAULT;
++
+ 	switch (kp->type) {
+ 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+ 	case V4L2_BUF_TYPE_VIDEO_OUTPUT:
+@@ -256,8 +259,7 @@ static int __put_v4l2_format32(struct v4l2_format *kp, struct v4l2_format32 __us
+ 
+ static int put_v4l2_format32(struct v4l2_format *kp, struct v4l2_format32 __user *up)
+ {
+-	if (!access_ok(VERIFY_WRITE, up, sizeof(struct v4l2_format32)) ||
+-		put_user(kp->type, &up->type))
++	if (!access_ok(VERIFY_WRITE, up, sizeof(struct v4l2_format32)))
+ 		return -EFAULT;
+ 	return __put_v4l2_format32(kp, up);
+ }
+@@ -265,8 +267,8 @@ static int put_v4l2_format32(struct v4l2_format *kp, struct v4l2_format32 __user
+ static int put_v4l2_create32(struct v4l2_create_buffers *kp, struct v4l2_create_buffers32 __user *up)
+ {
+ 	if (!access_ok(VERIFY_WRITE, up, sizeof(struct v4l2_create_buffers32)) ||
+-	    copy_to_user(up, kp, offsetof(struct v4l2_create_buffers32, format.fmt)))
+-			return -EFAULT;
++	    copy_to_user(up, kp, offsetof(struct v4l2_create_buffers32, format)))
++		return -EFAULT;
+ 	return __put_v4l2_format32(&kp->format, &up->format);
+ }
+ 
+-- 
+2.43.0
+

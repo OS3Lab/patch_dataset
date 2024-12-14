@@ -1,0 +1,40 @@
+From e674844ad3a2c336e23005a82354db5b9b2f4773 Mon Sep 17 00:00:00 2001
+From: Alyssa Milburn <amilburn@zall.org>
+Date: Sat, 1 Apr 2017 14:34:08 -0300
+Subject: [PATCH] zr364xx: enforce minimum size when reading header
+
+commit ee0fe833d96793853335844b6d99fb76bd12cbeb upstream.
+
+This code copies actual_length-128 bytes from the header, which will
+underflow if the received buffer is too small.
+
+Signed-off-by: Alyssa Milburn <amilburn@zall.org>
+Signed-off-by: Mauro Carvalho Chehab <mchehab@s-opensource.com>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/media/video/zr364xx.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/media/video/zr364xx.c b/drivers/media/video/zr364xx.c
+index e78cf94f491e..ed3f740a20d4 100644
+--- a/drivers/media/video/zr364xx.c
++++ b/drivers/media/video/zr364xx.c
+@@ -611,6 +611,14 @@ static int zr364xx_read_video_callback(struct zr364xx_camera *cam,
+ 	ptr = pdest = frm->lpvbits;
+ 
+ 	if (frm->ulState == ZR364XX_READ_IDLE) {
++		if (purb->actual_length < 128) {
++			/* header incomplete */
++			dev_info(&cam->udev->dev,
++				 "%s: buffer (%d bytes) too small to hold jpeg header. Discarding.\n",
++				 __func__, purb->actual_length);
++			return -EINVAL;
++		}
++
+ 		frm->ulState = ZR364XX_READ_FRAME;
+ 		frm->cur_size = 0;
+ 
+-- 
+2.43.0
+

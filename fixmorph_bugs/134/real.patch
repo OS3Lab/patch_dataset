@@ -1,0 +1,35 @@
+From a8411898d2f2230332127e458ae0ab830fab83df Mon Sep 17 00:00:00 2001
+From: Linus Walleij <linus.walleij@linaro.org>
+Date: Tue, 16 Aug 2016 15:33:28 +0200
+Subject: [PATCH] iio: accel: kxsd9: Fix raw read return
+
+commit 7ac61a062f3147dc23e3f12b9dfe7c4dd35f9cb8 upstream.
+
+Any readings from the raw interface of the KXSD9 driver will
+return an empty string, because it does not return
+IIO_VAL_INT but rather some random value from the accelerometer
+to the caller.
+
+Signed-off-by: Linus Walleij <linus.walleij@linaro.org>
+Signed-off-by: Jonathan Cameron <jic23@kernel.org>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/staging/iio/accel/kxsd9.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/staging/iio/accel/kxsd9.c b/drivers/staging/iio/accel/kxsd9.c
+index 5541ed38e090..0507253ad2d3 100644
+--- a/drivers/staging/iio/accel/kxsd9.c
++++ b/drivers/staging/iio/accel/kxsd9.c
+@@ -163,6 +163,7 @@ static int kxsd9_read_raw(struct iio_dev *indio_dev,
+ 		if (ret < 0)
+ 			goto error_ret;
+ 		*val = ret;
++		ret = IIO_VAL_INT;
+ 		break;
+ 	case (1 << IIO_CHAN_INFO_SCALE_SHARED):
+ 		ret = spi_w8r8(st->us, KXSD9_READ(KXSD9_REG_CTRL_C));
+-- 
+2.43.0
+

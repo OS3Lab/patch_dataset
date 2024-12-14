@@ -1,0 +1,45 @@
+From 2019319b6ab967b7c3de01472b3feca251976cf7 Mon Sep 17 00:00:00 2001
+From: Felipe Balbi <balbi@ti.com>
+Date: Mon, 2 Feb 2015 16:24:17 -0600
+Subject: [PATCH] usb: gadget: function: phonet: balance usb_ep_disable calls
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+commit 9ec36f7fe20ef919cc15171e1da1b6739222541a upstream.
+
+f_phonet's ->set_alt() method will call usb_ep_disable()
+potentially on an endpoint which is already disabled. That's
+something the gadget/function driver must guarantee that it's
+always balanced.
+
+In order to balance the calls, just make sure the endpoint
+was enabled before by means of checking the validity of
+driver_data.
+
+Reported-by: Pali Rohár <pali.rohar@gmail.com>
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ drivers/usb/gadget/f_phonet.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/gadget/f_phonet.c b/drivers/usb/gadget/f_phonet.c
+index eb3aa817a662..74ff54141416 100644
+--- a/drivers/usb/gadget/f_phonet.c
++++ b/drivers/usb/gadget/f_phonet.c
+@@ -417,7 +417,10 @@ static int pn_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
+ 			return -EINVAL;
+ 
+ 		spin_lock(&port->lock);
+-		__pn_reset(f);
++
++		if (fp->in_ep->driver_data)
++			__pn_reset(f);
++
+ 		if (alt == 1) {
+ 			int i;
+ 
+-- 
+2.43.0
+

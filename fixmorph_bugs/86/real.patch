@@ -1,0 +1,39 @@
+From 07599cf068b05c2e9b9a24036b43e19ff8337985 Mon Sep 17 00:00:00 2001
+From: Christophe JAILLET <christophe.jaillet@wanadoo.fr>
+Date: Thu, 21 Sep 2017 19:23:56 -0400
+Subject: [PATCH] media: bt8xx: Fix err 'bt878_probe()'
+
+commit 45392ff6881dbe56d41ef0b17c2e576065f8ffa1 upstream.
+
+This is odd to call 'pci_disable_device()' in an error path before a
+coresponding successful 'pci_enable_device()'.
+
+Return directly instead.
+
+Fixes: 77e0be12100a ("V4L/DVB (4176): Bug-fix: Fix memory overflow")
+
+Signed-off-by: Christophe JAILLET <christophe.jaillet@wanadoo.fr>
+Signed-off-by: Mauro Carvalho Chehab <mchehab@s-opensource.com>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/media/dvb/bt8xx/bt878.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/media/dvb/bt8xx/bt878.c b/drivers/media/dvb/bt8xx/bt878.c
+index b34fa95185e4..db5382470bcd 100644
+--- a/drivers/media/dvb/bt8xx/bt878.c
++++ b/drivers/media/dvb/bt8xx/bt878.c
+@@ -434,8 +434,7 @@ static int __devinit bt878_probe(struct pci_dev *dev,
+ 	       bt878_num);
+ 	if (bt878_num >= BT878_MAX) {
+ 		printk(KERN_ERR "bt878: Too many devices inserted\n");
+-		result = -ENOMEM;
+-		goto fail0;
++		return -ENOMEM;
+ 	}
+ 	if (pci_enable_device(dev))
+ 		return -EIO;
+-- 
+2.43.0
+

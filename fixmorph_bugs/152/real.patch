@@ -1,0 +1,40 @@
+From f7b0ea2245a0c7e6b255b0fa6f0a83a04a821da5 Mon Sep 17 00:00:00 2001
+From: Peng Li <lipeng321@huawei.com>
+Date: Fri, 22 Dec 2017 12:21:43 +0800
+Subject: [PATCH] net: hns3: free the ring_data structrue when change tqps
+
+[ Upstream commit 99fdf6b1cadf41bb253408589788f025027274f3 ]
+
+This patch fixes a memory leak problems in change tqps process,
+the function hns3_uninit_all_ring and hns3_init_all_ring
+may be called many times.
+
+Signed-off-by: Peng Li <lipeng321@huawei.com>
+Signed-off-by: Mingguang Qu <qumingguang@huawei.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/net/ethernet/hisilicon/hns3/hns3pf/hns3_enet.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/net/ethernet/hisilicon/hns3/hns3pf/hns3_enet.c b/drivers/net/ethernet/hisilicon/hns3/hns3pf/hns3_enet.c
+index 186772493711..3e7e13b9a385 100644
+--- a/drivers/net/ethernet/hisilicon/hns3/hns3pf/hns3_enet.c
++++ b/drivers/net/ethernet/hisilicon/hns3/hns3pf/hns3_enet.c
+@@ -2687,8 +2687,12 @@ static int hns3_uninit_all_ring(struct hns3_nic_priv *priv)
+ 			h->ae_algo->ops->reset_queue(h, i);
+ 
+ 		hns3_fini_ring(priv->ring_data[i].ring);
++		devm_kfree(priv->dev, priv->ring_data[i].ring);
+ 		hns3_fini_ring(priv->ring_data[i + h->kinfo.num_tqps].ring);
++		devm_kfree(priv->dev,
++			   priv->ring_data[i + h->kinfo.num_tqps].ring);
+ 	}
++	devm_kfree(priv->dev, priv->ring_data);
+ 
+ 	return 0;
+ }
+-- 
+2.43.0
+

@@ -1,0 +1,84 @@
+From cfb3474f6849b53d0b68e8e3b22ea2ce392b9fd8 Mon Sep 17 00:00:00 2001
+From: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Date: Tue, 12 Apr 2016 12:56:25 +0100
+Subject: [PATCH] spi: spi-ti-qspi: Fix FLEN and WLEN settings if bits_per_word
+ is overridden
+
+commit ea1b60fb085839a9544cb3a0069992991beabb7f upstream.
+
+Each transfer can specify 8, 16 or 32 bits per word independently of
+the default for the device being addressed.  However, currently we
+calculate the number of words in the frame assuming that the word size
+is the device default.
+
+If multiple transfers in the same message have differing
+bits_per_word, we bitwise-or the different values in the WLEN register
+field.
+
+Fix both of these.  Also rename 'frame_length' to 'frame_len_words' to
+make clear that it's not a byte count like spi_message::frame_length.
+
+Signed-off-by: Ben Hutchings <ben.hutchings@codethink.co.uk>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+[bwh: Backported to 3.16:
+ - QSPI_WLEN_MAX_BITS is not defined so use the literal value 128
+ - Adjust context]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/spi/spi-ti-qspi.c | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/spi/spi-ti-qspi.c b/drivers/spi/spi-ti-qspi.c
+index b68511204367..1be7ca5a66c3 100644
+--- a/drivers/spi/spi-ti-qspi.c
++++ b/drivers/spi/spi-ti-qspi.c
+@@ -91,6 +91,7 @@ struct ti_qspi {
+ /* Command */
+ #define QSPI_EN_CS(n)			(n << 28)
+ #define QSPI_WLEN(n)			((n - 1) << 19)
++#define QSPI_WLEN_MASK			QSPI_WLEN(128)
+ #define QSPI_3_PIN			(1 << 18)
+ #define QSPI_RD_SNGL			(1 << 16)
+ #define QSPI_WR_SNGL			(2 << 16)
+@@ -322,7 +323,7 @@ static int ti_qspi_start_transfer_one(struct spi_master *master,
+ 	struct spi_device *spi = m->spi;
+ 	struct spi_transfer *t;
+ 	int status = 0, ret;
+-	int frame_length;
++	unsigned int frame_len_words;
+ 
+ 	/* setup device control reg */
+ 	qspi->dc = 0;
+@@ -334,14 +335,15 @@ static int ti_qspi_start_transfer_one(struct spi_master *master,
+ 	if (spi->mode & SPI_CS_HIGH)
+ 		qspi->dc |= QSPI_CSPOL(spi->chip_select);
+ 
+-	frame_length = (m->frame_length << 3) / spi->bits_per_word;
+-
+-	frame_length = clamp(frame_length, 0, QSPI_FRAME);
++	frame_len_words = 0;
++	list_for_each_entry(t, &m->transfers, transfer_list)
++		frame_len_words += t->len / (t->bits_per_word >> 3);
++	frame_len_words = min_t(unsigned int, frame_len_words, QSPI_FRAME);
+ 
+ 	/* setup command reg */
+ 	qspi->cmd = 0;
+ 	qspi->cmd |= QSPI_EN_CS(spi->chip_select);
+-	qspi->cmd |= QSPI_FLEN(frame_length);
++	qspi->cmd |= QSPI_FLEN(frame_len_words);
+ 	qspi->cmd |= QSPI_WC_CMD_INT_EN;
+ 
+ 	ti_qspi_write(qspi, QSPI_WC_INT_EN, QSPI_INTR_ENABLE_SET_REG);
+@@ -350,7 +352,8 @@ static int ti_qspi_start_transfer_one(struct spi_master *master,
+ 	mutex_lock(&qspi->list_lock);
+ 
+ 	list_for_each_entry(t, &m->transfers, transfer_list) {
+-		qspi->cmd |= QSPI_WLEN(t->bits_per_word);
++		qspi->cmd = ((qspi->cmd & ~QSPI_WLEN_MASK) |
++			     QSPI_WLEN(t->bits_per_word));
+ 
+ 		ret = qspi_transfer_msg(qspi, t);
+ 		if (ret) {
+-- 
+2.43.0
+

@@ -1,0 +1,50 @@
+From be67618b17b931289b34c376926b8de338152fb3 Mon Sep 17 00:00:00 2001
+From: Daniel Borkmann <daniel@iogearbox.net>
+Date: Wed, 11 Nov 2015 23:25:40 +0100
+Subject: [PATCH] packet: do skb_probe_transport_header when we actually have
+ data
+
+[ Upstream commit efdfa2f7848f64517008136fb41f53c4a1faf93a ]
+
+In tpacket_fill_skb() commit c1aad275b029 ("packet: set transport
+header before doing xmit") and later on 40893fd0fd4e ("net: switch
+to use skb_probe_transport_header()") was probing for a transport
+header on the skb from a ring buffer slot, but at a time, where
+the skb has _not even_ been filled with data yet. So that call into
+the flow dissector is pretty useless. Lets do it after we've set
+up the skb frags.
+
+Fixes: c1aad275b029 ("packet: set transport header before doing xmit")
+Reported-by: Eric Dumazet <edumazet@google.com>
+Signed-off-by: Daniel Borkmann <daniel@iogearbox.net>
+Acked-by: Jason Wang <jasowang@redhat.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ net/packet/af_packet.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/net/packet/af_packet.c b/net/packet/af_packet.c
+index 7f63613148b9..645010b9abc0 100644
+--- a/net/packet/af_packet.c
++++ b/net/packet/af_packet.c
+@@ -1991,7 +1991,6 @@ static int tpacket_fill_skb(struct packet_sock *po, struct sk_buff *skb,
+ 
+ 	skb_reserve(skb, hlen);
+ 	skb_reset_network_header(skb);
+-	skb_probe_transport_header(skb, 0);
+ 
+ 	if (po->tp_tx_has_off) {
+ 		int off_min, off_max, off;
+@@ -2076,6 +2075,8 @@ static int tpacket_fill_skb(struct packet_sock *po, struct sk_buff *skb,
+ 		len = ((to_write > len_max) ? len_max : to_write);
+ 	}
+ 
++	skb_probe_transport_header(skb, 0);
++
+ 	return tp_len;
+ }
+ 
+-- 
+2.43.0
+

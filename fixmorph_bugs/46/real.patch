@@ -1,0 +1,37 @@
+From 95f92efede0bece7fa9eaaf4329e5445eb927739 Mon Sep 17 00:00:00 2001
+From: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Date: Wed, 29 Apr 2015 17:10:15 -0400
+Subject: [PATCH] xen/events: Set irq_info->evtchn before binding the channel
+ to CPU in __startup_pirq()
+
+commit 16e6bd5970c88a2ac018b84a5f1dd5c2ff1fdf2c upstream.
+
+.. because bind_evtchn_to_cpu(evtchn, cpu) will map evtchn to
+'info' and pass 'info' down to xen_evtchn_port_bind_to_cpu().
+
+Signed-off-by: Boris Ostrovsky <boris.ostrovsky@oracle.com>
+Tested-by: Annie Li <annie.li@oracle.com>
+Signed-off-by: David Vrabel <david.vrabel@citrix.com>
+[lizf: Backported to 3.4: adjust filename and context]
+Signed-off-by: Zefan Li <lizefan@huawei.com>
+---
+ drivers/xen/events.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/xen/events.c b/drivers/xen/events.c
+index 9161f06564eb..fdf842c83a7a 100644
+--- a/drivers/xen/events.c
++++ b/drivers/xen/events.c
+@@ -563,8 +563,8 @@ static unsigned int __startup_pirq(unsigned int irq)
+ 	pirq_query_unmask(irq);
+ 
+ 	evtchn_to_irq[evtchn] = irq;
+-	bind_evtchn_to_cpu(evtchn, 0);
+ 	info->evtchn = evtchn;
++	bind_evtchn_to_cpu(evtchn, 0);
+ 
+ out:
+ 	unmask_evtchn(evtchn);
+-- 
+2.43.0
+

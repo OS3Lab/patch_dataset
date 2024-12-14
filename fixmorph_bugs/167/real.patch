@@ -1,0 +1,34 @@
+From e437495c1a550626bd46a6273db049ad9287ec95 Mon Sep 17 00:00:00 2001
+From: Larry Finger <Larry.Finger@lwfinger.net>
+Date: Mon, 14 Dec 2015 16:34:37 -0600
+Subject: [PATCH] rtlwifi: rtl8192ce: Fix handling of module parameters
+
+commit b24f19f16b9e43f54218c07609b783ea8625406a upstream.
+
+The module parameter for software encryption was never transferred to
+the location used by the driver.
+
+Signed-off-by: Larry Finger <Larry.Finger@lwfinger.net>
+Signed-off-by: Kalle Valo <kvalo@codeaurora.org>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/net/wireless/rtlwifi/rtl8192ce/sw.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/net/wireless/rtlwifi/rtl8192ce/sw.c b/drivers/net/wireless/rtlwifi/rtl8192ce/sw.c
+index df852e8ab529..f7cff456dd06 100644
+--- a/drivers/net/wireless/rtlwifi/rtl8192ce/sw.c
++++ b/drivers/net/wireless/rtlwifi/rtl8192ce/sw.c
+@@ -138,6 +138,8 @@ int rtl92c_init_sw_vars(struct ieee80211_hw *hw)
+ 	rtlpriv->psc.inactiveps = rtlpriv->cfg->mod_params->inactiveps;
+ 	rtlpriv->psc.swctrl_lps = rtlpriv->cfg->mod_params->swctrl_lps;
+ 	rtlpriv->psc.fwctrl_lps = rtlpriv->cfg->mod_params->fwctrl_lps;
++	rtlpriv->cfg->mod_params->sw_crypto =
++		rtlpriv->cfg->mod_params->sw_crypto;
+ 	if (!rtlpriv->psc.inactiveps)
+ 		pr_info("rtl8192ce: Power Save off (module option)\n");
+ 	if (!rtlpriv->psc.fwctrl_lps)
+-- 
+2.43.0
+

@@ -1,0 +1,37 @@
+From c89536542cc5c49c7ceefd628c36c0326f6e2842 Mon Sep 17 00:00:00 2001
+From: Hans Verkuil <hverkuil@xs4all.nl>
+Date: Fri, 4 Aug 2017 07:25:06 -0400
+Subject: [PATCH] media: v4l2-compat-ioctl32.c: add capabilities field to,
+ v4l2_input32
+
+commit 037e0865c2ecbaa4558feba239ece08d7e457ec0 upstream.
+
+The v4l2_input32 struct wasn't updated when this field was added.
+It didn't cause a failure in the compat code, but it is better to
+keep it in sync with v4l2_input to avoid confusion.
+
+Signed-off-by: Hans Verkuil <hans.verkuil@cisco.com>
+Signed-off-by: Mauro Carvalho Chehab <mchehab@s-opensource.com>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/media/video/v4l2-compat-ioctl32.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/video/v4l2-compat-ioctl32.c b/drivers/media/video/v4l2-compat-ioctl32.c
+index f3bfd3c61f4a..3aaaf29fe6d5 100644
+--- a/drivers/media/video/v4l2-compat-ioctl32.c
++++ b/drivers/media/video/v4l2-compat-ioctl32.c
+@@ -572,7 +572,8 @@ struct v4l2_input32 {
+ 	__u32        tuner;             /*  Associated tuner */
+ 	compat_u64   std;
+ 	__u32	     status;
+-	__u32	     reserved[4];
++	__u32	     capabilities;
++	__u32	     reserved[3];
+ };
+ 
+ /* The 64-bit v4l2_input struct has extra padding at the end of the struct.
+-- 
+2.43.0
+

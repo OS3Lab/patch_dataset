@@ -1,0 +1,59 @@
+From 5fb69048bd7b9b02502ea8cef5d808551e538979 Mon Sep 17 00:00:00 2001
+From: Dong Aisheng <aisheng.dong@nxp.com>
+Date: Fri, 19 May 2017 15:05:41 +0800
+Subject: [PATCH] pinctrl: imx: fix debug message for SHARE_MUX_CONF_REG case
+
+commit 66b54e3a5a64925d9819eae86b8f36e90e60037f upstream.
+
+The original implemented debug message does not work for
+SHARE_MUX_CONF_REG case. This patch fixes it.
+
+Fixes: bf5a530971af ("pinctrl: imx: add VF610 support to imx pinctrl framework")
+Signed-off-by: Dong Aisheng <aisheng.dong@nxp.com>
+Acked-by: Shawn Guo <shawnguo@kernel.org>
+Signed-off-by: Linus Walleij <linus.walleij@linaro.org>
+[bwh: Backported to 3.16: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/pinctrl/pinctrl-imx.c | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/pinctrl/pinctrl-imx.c b/drivers/pinctrl/pinctrl-imx.c
+index 6cd65e6987e4..1c489e179149 100644
+--- a/drivers/pinctrl/pinctrl-imx.c
++++ b/drivers/pinctrl/pinctrl-imx.c
+@@ -216,11 +216,13 @@ static int imx_pmx_enable(struct pinctrl_dev *pctldev, unsigned selector,
+ 			reg &= ~(0x7 << 20);
+ 			reg |= (pin->mux_mode << 20);
+ 			writel(reg, ipctl->base + pin_reg->mux_reg);
++			dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%x\n",
++				pin_reg->mux_reg, reg);
+ 		} else {
+ 			writel(pin->mux_mode, ipctl->base + pin_reg->mux_reg);
++			dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%x\n",
++				pin_reg->mux_reg, pin->mux_mode);
+ 		}
+-		dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%x\n",
+-			pin_reg->mux_reg, pin->mux_mode);
+ 
+ 		/*
+ 		 * If the select input value begins with 0xff, it's a quirky
+@@ -347,11 +349,13 @@ static int imx_pinconf_set(struct pinctrl_dev *pctldev,
+ 			reg &= ~0xffff;
+ 			reg |= configs[i];
+ 			writel(reg, ipctl->base + pin_reg->conf_reg);
++			dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%x\n",
++				pin_reg->conf_reg, reg);
+ 		} else {
+ 			writel(configs[i], ipctl->base + pin_reg->conf_reg);
++			dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%lx\n",
++				pin_reg->conf_reg, configs[i]);
+ 		}
+-		dev_dbg(ipctl->dev, "write: offset 0x%x val 0x%lx\n",
+-			pin_reg->conf_reg, configs[i]);
+ 	} /* for each config */
+ 
+ 	return 0;
+-- 
+2.43.0
+

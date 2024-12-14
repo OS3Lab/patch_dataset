@@ -1,0 +1,86 @@
+From eef338c814bf9c100525daf4b31880e2437a83ea Mon Sep 17 00:00:00 2001
+From: Anssi Hannula <anssi.hannula@bitwise.fi>
+Date: Mon, 13 Feb 2017 14:06:10 +0200
+Subject: [PATCH] mmc: sdhci-of-arasan: fix incorrect timeout clock
+
+commit 16681037e75ce08f2980ac5dbb03414429c7a55d upstream.
+
+sdhci_arasan_get_timeout_clock() divides the frequency it has with (1 <<
+(13 + divisor)).
+
+However, the divisor is not some Arasan-specific value, but instead is
+just the Data Timeout Counter Value from the SDHCI Timeout Control
+Register.
+
+Applying it here like this is wrong as the sdhci driver already takes
+that value into account when calculating timeouts, and in fact it *sets*
+that register value based on how long a timeout is wanted.
+
+Additionally, sdhci core interprets the .get_timeout_clock callback
+return value as if it were read from hardware registers, i.e. the unit
+should be kHz or MHz depending on SDHCI_TIMEOUT_CLK_UNIT capability bit.
+This bit is set at least on the tested Zynq-7000 SoC.
+
+With the tested hardware (SDHCI_TIMEOUT_CLK_UNIT set) this results in
+too high a timeout clock rate being reported, causing the core to use
+longer-than-needed timeouts. Additionally, on a partitioned MMC
+(therefore having erase_group_def bit set) mmc_calc_max_discard()
+disables discard support as it looks like controller does not support
+the long timeouts needed for that.
+
+Do not apply the extra divisor and return the timeout clock in the
+expected unit.
+
+Tested with a Zynq-7000 SoC and a partitioned Toshiba THGBMAG5A1JBAWR
+eMMC card.
+
+Signed-off-by: Anssi Hannula <anssi.hannula@bitwise.fi>
+Fixes: e3ec3a3d11ad ("mmc: arasan: Add driver for Arasan SDHCI")
+Signed-off-by: Ulf Hansson <ulf.hansson@linaro.org>
+[bwh: Backported to 3.16: adjust context]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/mmc/host/sdhci-of-arasan.c | 16 +++++-----------
+ 1 file changed, 5 insertions(+), 11 deletions(-)
+
+diff --git a/drivers/mmc/host/sdhci-of-arasan.c b/drivers/mmc/host/sdhci-of-arasan.c
+index 5bd1092310f2..698dafa110a9 100644
+--- a/drivers/mmc/host/sdhci-of-arasan.c
++++ b/drivers/mmc/host/sdhci-of-arasan.c
+@@ -22,12 +22,6 @@
+ #include <linux/module.h>
+ #include "sdhci-pltfm.h"
+ 
+-#define SDHCI_ARASAN_CLK_CTRL_OFFSET	0x2c
+-
+-#define CLK_CTRL_TIMEOUT_SHIFT		16
+-#define CLK_CTRL_TIMEOUT_MASK		(0xf << CLK_CTRL_TIMEOUT_SHIFT)
+-#define CLK_CTRL_TIMEOUT_MIN_EXP	13
+-
+ /**
+  * struct sdhci_arasan_data
+  * @clk_ahb:	Pointer to the AHB clock
+@@ -38,15 +32,15 @@ struct sdhci_arasan_data {
+ 
+ static unsigned int sdhci_arasan_get_timeout_clock(struct sdhci_host *host)
+ {
+-	u32 div;
+ 	unsigned long freq;
+ 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+ 
+-	div = readl(host->ioaddr + SDHCI_ARASAN_CLK_CTRL_OFFSET);
+-	div = (div & CLK_CTRL_TIMEOUT_MASK) >> CLK_CTRL_TIMEOUT_SHIFT;
++	/* SDHCI timeout clock is in kHz */
++	freq = DIV_ROUND_UP(clk_get_rate(pltfm_host->clk), 1000);
+ 
+-	freq = clk_get_rate(pltfm_host->clk);
+-	freq /= 1 << (CLK_CTRL_TIMEOUT_MIN_EXP + div);
++	/* or in MHz */
++	if (host->caps & SDHCI_TIMEOUT_CLK_UNIT)
++		freq = DIV_ROUND_UP(freq, 1000);
+ 
+ 	return freq;
+ }
+-- 
+2.43.0
+

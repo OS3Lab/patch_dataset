@@ -1,0 +1,35 @@
+From 5a79e43ffa5014c020e0d0f4e383205f87b10111 Mon Sep 17 00:00:00 2001
+From: Stefano Brivio <sbrivio@redhat.com>
+Date: Thu, 15 Mar 2018 17:16:29 +0100
+Subject: [PATCH] vti4: Don't override MTU passed on link creation via IFLA_MTU
+
+commit 03080e5ec72740c1a62e6730f2a5f3f114f11b19 upstream.
+
+Don't hardcode a MTU value on vti tunnel initialization,
+ip_tunnel_newlink() is able to deal with this already. See also
+commit ffc2b6ee4174 ("ip_gre: fix IFLA_MTU ignored on NEWLINK").
+
+Fixes: 1181412c1a67 ("net/ipv4: VTI support new module for ip_vti.")
+Signed-off-by: Stefano Brivio <sbrivio@redhat.com>
+Acked-by: Sabrina Dubroca <sd@queasysnail.net>
+Signed-off-by: Steffen Klassert <steffen.klassert@secunet.com>
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ net/ipv4/ip_vti.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/net/ipv4/ip_vti.c b/net/ipv4/ip_vti.c
+index 778ee1bf40ad..b4fc9e710308 100644
+--- a/net/ipv4/ip_vti.c
++++ b/net/ipv4/ip_vti.c
+@@ -359,7 +359,6 @@ static int vti_tunnel_init(struct net_device *dev)
+ 	memcpy(dev->dev_addr, &iph->saddr, 4);
+ 	memcpy(dev->broadcast, &iph->daddr, 4);
+ 
+-	dev->mtu		= ETH_DATA_LEN;
+ 	dev->flags		= IFF_NOARP;
+ 	dev->iflink		= 0;
+ 	dev->addr_len		= 4;
+-- 
+2.43.0
+

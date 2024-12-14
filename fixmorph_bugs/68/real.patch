@@ -1,0 +1,43 @@
+From adce3b19692f0d3a9899834511a44290efa90731 Mon Sep 17 00:00:00 2001
+From: Linus Walleij <linus.walleij@linaro.org>
+Date: Thu, 1 Sep 2016 11:44:35 +0200
+Subject: [PATCH] iio: accel: kxsd9: Fix scaling bug
+
+commit 307fe9dd11ae44d4f8881ee449a7cbac36e1f5de upstream.
+
+All the scaling of the KXSD9 involves multiplication with a
+fraction number < 1.
+
+However the scaling value returned from IIO_INFO_SCALE was
+unpredictable as only the micros of the value was assigned, and
+not the integer part, resulting in scaling like this:
+
+$cat in_accel_scale
+-1057462640.011978
+
+Fix this by assigning zero to the integer part.
+
+Tested-by: Jonathan Cameron <jic23@kernel.org>
+Signed-off-by: Linus Walleij <linus.walleij@linaro.org>
+Signed-off-by: Jonathan Cameron <jic23@kernel.org>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/staging/iio/accel/kxsd9.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/staging/iio/accel/kxsd9.c b/drivers/staging/iio/accel/kxsd9.c
+index 0507253ad2d3..3ec7e34e8ada 100644
+--- a/drivers/staging/iio/accel/kxsd9.c
++++ b/drivers/staging/iio/accel/kxsd9.c
+@@ -169,6 +169,7 @@ static int kxsd9_read_raw(struct iio_dev *indio_dev,
+ 		ret = spi_w8r8(st->us, KXSD9_READ(KXSD9_REG_CTRL_C));
+ 		if (ret < 0)
+ 			goto error_ret;
++		*val = 0;
+ 		*val2 = kxsd9_micro_scales[ret & KXSD9_FS_MASK];
+ 		ret = IIO_VAL_INT_PLUS_MICRO;
+ 		break;
+-- 
+2.43.0
+

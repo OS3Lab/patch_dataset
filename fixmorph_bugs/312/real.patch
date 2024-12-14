@@ -1,0 +1,36 @@
+From c846fc16527ac6a768aaf1e7bede685b03344050 Mon Sep 17 00:00:00 2001
+From: Shaohua Li <shli@fb.com>
+Date: Mon, 1 May 2017 12:15:07 -0700
+Subject: [PATCH] md/raid10: skip spare disk as 'first' disk
+
+[ Upstream commit b506335e5d2b4ec687dde392a3bdbf7601778f1d ]
+
+Commit 6f287ca(md/raid10: reset the 'first' at the end of loop) ignores
+a case in reshape, the first rdev could be a spare disk, which shouldn't
+be accounted as the first disk since it doesn't include the offset info.
+
+Fix: 6f287ca(md/raid10: reset the 'first' at the end of loop)
+Cc: Guoqing Jiang <gqjiang@suse.com>
+Cc: NeilBrown <neilb@suse.com>
+Signed-off-by: Shaohua Li <shli@fb.com>
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/md/raid10.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/md/raid10.c b/drivers/md/raid10.c
+index d207748fdc41..432c17fa636e 100644
+--- a/drivers/md/raid10.c
++++ b/drivers/md/raid10.c
+@@ -4132,6 +4132,7 @@ static int raid10_start_reshape(struct mddev *mddev)
+ 				diff = 0;
+ 			if (first || diff < min_offset_diff)
+ 				min_offset_diff = diff;
++			first = 0;
+ 		}
+ 	}
+ 
+-- 
+2.43.0
+

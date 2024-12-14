@@ -1,0 +1,36 @@
+From afa82093efadd1e5609395fb7a6bd355bce6aff8 Mon Sep 17 00:00:00 2001
+From: Eric Biggers <ebiggers@google.com>
+Date: Tue, 30 Aug 2016 09:51:44 -0700
+Subject: [PATCH] dm crypt: fix free of bad values after tfm allocation failure
+
+commit 5d0be84ec0cacfc7a6d6ea548afdd07d481324cd upstream.
+
+If crypt_alloc_tfms() had to allocate multiple tfms and it failed before
+the last allocation, then it would call crypt_free_tfms() and could free
+pointers from uninitialized memory -- due to the crypt_free_tfms() check
+for non-zero cc->tfms[i].  Fix by allocating zeroed memory.
+
+Signed-off-by: Eric Biggers <ebiggers@google.com>
+Signed-off-by: Mike Snitzer <snitzer@redhat.com>
+[bwh: Backported to 3.16: adjust context]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/md/dm-crypt.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/md/dm-crypt.c b/drivers/md/dm-crypt.c
+index f87223056696..34e7db1e7304 100644
+--- a/drivers/md/dm-crypt.c
++++ b/drivers/md/dm-crypt.c
+@@ -1400,7 +1400,7 @@ static int crypt_alloc_tfms(struct crypt_config *cc, char *ciphermode)
+ 	unsigned i;
+ 	int err;
+ 
+-	cc->tfms = kmalloc(cc->tfms_count * sizeof(struct crypto_ablkcipher *),
++	cc->tfms = kzalloc(cc->tfms_count * sizeof(struct crypto_ablkcipher *),
+ 			   GFP_KERNEL);
+ 	if (!cc->tfms)
+ 		return -ENOMEM;
+-- 
+2.43.0
+

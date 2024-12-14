@@ -1,0 +1,72 @@
+From 31c442b69caa213d74a091c659f69ce05177125c Mon Sep 17 00:00:00 2001
+From: YueHaibing <yuehaibing@huawei.com>
+Date: Wed, 1 Aug 2018 13:10:49 +0800
+Subject: [PATCH] pinctrl: berlin: fix 'pctrl->functions' allocation in
+ berlin_pinctrl_build_state
+
+commit b5031b7db77dc47f474f0efc2b2552c32b7bb59d upstream.
+
+fixes following Smatch static check warning:
+
+ drivers/pinctrl/berlin/berlin.c:237 berlin_pinctrl_build_state()
+ warn: passing devm_ allocated variable to kfree. 'pctrl->functions'
+
+As we will be calling krealloc() on pointer 'pctrl->functions', which means
+kfree() will be called in there, devm_kzalloc() shouldn't be used with
+the allocation in the first place.  Fix the warning by calling kcalloc()
+and managing the free procedure in error path on our own.
+
+Fixes: 3de68d331c24 ("pinctrl: berlin: add the core pinctrl driver for Marvell Berlin SoCs")
+Signed-off-by: YueHaibing <yuehaibing@huawei.com>
+Reviewed-by: Jisheng Zhang <Jisheng.Zhang@synaptics.com>
+Signed-off-by: Linus Walleij <linus.walleij@linaro.org>
+[bwh: Backported to 3.16: berlin_pinctrl_state() was not yet converted
+ to devm_kcalloc()]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/pinctrl/berlin/berlin.c | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/pinctrl/berlin/berlin.c b/drivers/pinctrl/berlin/berlin.c
+index 86db2235ab00..605a50a7dc8a 100644
+--- a/drivers/pinctrl/berlin/berlin.c
++++ b/drivers/pinctrl/berlin/berlin.c
+@@ -237,9 +237,8 @@ static int berlin_pinctrl_build_state(struct platform_device *pdev)
+ 	}
+ 
+ 	/* we will reallocate later */
+-	pctrl->functions = devm_kzalloc(&pdev->dev,
+-					max_functions * sizeof(*pctrl->functions),
+-					GFP_KERNEL);
++	pctrl->functions = kcalloc(max_functions,
++				   sizeof(*pctrl->functions), GFP_KERNEL);
+ 	if (!pctrl->functions)
+ 		return -ENOMEM;
+ 
+@@ -277,8 +276,10 @@ static int berlin_pinctrl_build_state(struct platform_device *pdev)
+ 				function++;
+ 			}
+ 
+-			if (!found)
++			if (!found) {
++				kfree(pctrl->functions);
+ 				return -EINVAL;
++			}
+ 
+ 			if (!function->groups) {
+ 				function->groups =
+@@ -286,8 +287,10 @@ static int berlin_pinctrl_build_state(struct platform_device *pdev)
+ 						     function->ngroups * sizeof(char *),
+ 						     GFP_KERNEL);
+ 
+-				if (!function->groups)
++				if (!function->groups) {
++					kfree(pctrl->functions);
+ 					return -ENOMEM;
++				}
+ 			}
+ 
+ 			groups = function->groups;
+-- 
+2.43.0
+

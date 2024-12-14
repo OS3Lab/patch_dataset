@@ -1,0 +1,60 @@
+From 6c66efd659c176158fa86fd22507b2d2a6f8cfba Mon Sep 17 00:00:00 2001
+From: Ganesh Mahendran <opensource.ganesh@gmail.com>
+Date: Wed, 10 Jan 2018 10:49:05 +0800
+Subject: [PATCH] android: binder: use VM_ALLOC to get vm area
+
+commit aac6830ec1cb681544212838911cdc57f2638216 upstream.
+
+VM_IOREMAP is used to access hardware through a mechanism called
+I/O mapped memory. Android binder is a IPC machanism which will
+not access I/O memory.
+
+And VM_IOREMAP has alignment requiement which may not needed in
+binder.
+    __get_vm_area_node()
+    {
+    ...
+        if (flags & VM_IOREMAP)
+            align = 1ul << clamp_t(int, fls_long(size),
+               PAGE_SHIFT, IOREMAP_MAX_ORDER);
+    ...
+    }
+
+This patch will save some kernel vm area, especially for 32bit os.
+
+In 32bit OS, kernel vm area is only 240MB. We may got below
+error when launching a app:
+
+<3>[ 4482.440053] binder_alloc: binder_alloc_mmap_handler: 15728 8ce67000-8cf65000 get_vm_area failed -12
+<3>[ 4483.218817] binder_alloc: binder_alloc_mmap_handler: 15745 8ce67000-8cf65000 get_vm_area failed -12
+
+Signed-off-by: Ganesh Mahendran <opensource.ganesh@gmail.com>
+Acked-by: Martijn Coenen <maco@android.com>
+Acked-by: Todd Kjos <tkjos@google.com>
+
+----
+V3: update comments
+V2: update comments
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+[bwh: Backported to 3.16: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/staging/android/binder.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/staging/android/binder.c b/drivers/staging/android/binder.c
+index 3b79624703a7..f83680cc115d 100644
+--- a/drivers/staging/android/binder.c
++++ b/drivers/staging/android/binder.c
+@@ -2808,7 +2808,7 @@ static int binder_mmap(struct file *filp, struct vm_area_struct *vma)
+ 		goto err_already_mapped;
+ 	}
+ 
+-	area = get_vm_area(vma->vm_end - vma->vm_start, VM_IOREMAP);
++	area = get_vm_area(vma->vm_end - vma->vm_start, VM_ALLOC);
+ 	if (area == NULL) {
+ 		ret = -ENOMEM;
+ 		failure_string = "get_vm_area";
+-- 
+2.43.0
+

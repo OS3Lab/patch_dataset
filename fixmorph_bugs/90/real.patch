@@ -1,0 +1,39 @@
+From 9e6ed4b8de9bc1c230fd12cb3af1d682962d35bb Mon Sep 17 00:00:00 2001
+From: Shuah Khan <shuahkh@osg.samsung.com>
+Date: Thu, 5 Apr 2018 16:29:04 -0600
+Subject: [PATCH] usbip: usbip_host: fix to hold parent lock for
+ device_attach() calls
+
+commit 4bfb141bc01312a817d36627cc47c93f801c216d upstream.
+
+usbip_host calls device_attach() without holding dev->parent lock.
+Fix it.
+
+Signed-off-by: Shuah Khan <shuahkh@osg.samsung.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+[bwh: Backported to 3.16: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/staging/usbip/stub_main.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/staging/usbip/stub_main.c b/drivers/staging/usbip/stub_main.c
+index 33da2c4a4bc3..799f371947b1 100644
+--- a/drivers/staging/usbip/stub_main.c
++++ b/drivers/staging/usbip/stub_main.c
+@@ -205,7 +205,12 @@ static ssize_t rebind_store(struct device_driver *dev, const char *buf,
+ 	if (!bid)
+ 		return -ENODEV;
+ 
++	/* device_attach() callers should hold parent lock for USB */
++	if (bid->udev->dev.parent)
++		device_lock(bid->udev->dev.parent);
+ 	ret = device_attach(&bid->udev->dev);
++	if (bid->udev->dev.parent)
++		device_unlock(bid->udev->dev.parent);
+ 	if (ret < 0) {
+ 		dev_err(&bid->udev->dev, "rebind failed\n");
+ 		return ret;
+-- 
+2.43.0
+

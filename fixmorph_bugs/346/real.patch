@@ -1,0 +1,38 @@
+From 262f7e9a8d2bdbe9bd589e7991602b92aa51b1bb Mon Sep 17 00:00:00 2001
+From: Christophe JAILLET <christophe.jaillet@wanadoo.fr>
+Date: Fri, 28 Apr 2017 01:51:40 -0300
+Subject: [PATCH] vb2: Fix an off by one error in 'vb2_plane_vaddr'
+
+commit 5ebb6dd36c9f5fb37b1077b393c254d70a14cb46 upstream.
+
+We should ensure that 'plane_no' is '< vb->num_planes' as done in
+'vb2_plane_cookie' just a few lines below.
+
+Fixes: e23ccc0ad925 ("[media] v4l: add videobuf2 Video for Linux 2 driver framework")
+
+Signed-off-by: Christophe JAILLET <christophe.jaillet@wanadoo.fr>
+Reviewed-by: Sakari Ailus <sakari.ailus@linux.intel.com>
+Signed-off-by: Hans Verkuil <hans.verkuil@cisco.com>
+Signed-off-by: Mauro Carvalho Chehab <mchehab@s-opensource.com>
+[bwh: Backported to 3.2: adjust filename, context]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/media/video/videobuf2-core.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/video/videobuf2-core.c b/drivers/media/video/videobuf2-core.c
+index 912a74f644a8..92dfe2322d96 100644
+--- a/drivers/media/video/videobuf2-core.c
++++ b/drivers/media/video/videobuf2-core.c
+@@ -731,7 +731,7 @@ void *vb2_plane_vaddr(struct vb2_buffer *vb, unsigned int plane_no)
+ {
+ 	struct vb2_queue *q = vb->vb2_queue;
+ 
+-	if (plane_no > vb->num_planes)
++	if (plane_no >= vb->num_planes)
+ 		return NULL;
+ 
+ 	return call_memop(q, plane_no, vaddr, vb->planes[plane_no].mem_priv);
+-- 
+2.43.0
+

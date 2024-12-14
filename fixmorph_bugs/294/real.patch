@@ -1,0 +1,47 @@
+From aca98714893b8275bf04927b3c73d1db70def1f6 Mon Sep 17 00:00:00 2001
+From: Filipe Manana <fdmanana@suse.com>
+Date: Fri, 3 Jul 2015 08:36:11 +0100
+Subject: [PATCH] Btrfs: fix memory leak in the extent_same ioctl
+
+commit 497b4050e0eacd4c746dd396d14916b1e669849d upstream.
+
+We were allocating memory with memdup_user() but we were never releasing
+that memory. This affected pretty much every call to the ioctl, whether
+it deduplicated extents or not.
+
+This issue was reported on IRC by Julian Taylor and on the mailing list
+by Marcel Ritter, credit goes to them for finding the issue.
+
+Reported-by: Julian Taylor <jtaylor.debian@googlemail.com>
+Reported-by: Marcel Ritter <ritter.marcel@gmail.com>
+Signed-off-by: Filipe Manana <fdmanana@suse.com>
+Reviewed-by: Mark Fasheh <mfasheh@suse.de>
+Signed-off-by: Jiri Slaby <jslaby@suse.cz>
+---
+ fs/btrfs/ioctl.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/fs/btrfs/ioctl.c b/fs/btrfs/ioctl.c
+index d43cd15c3097..5f597cf570be 100644
+--- a/fs/btrfs/ioctl.c
++++ b/fs/btrfs/ioctl.c
+@@ -2707,7 +2707,7 @@ static long btrfs_ioctl_file_extent_same(struct file *file,
+ 					 void __user *argp)
+ {
+ 	struct btrfs_ioctl_same_args tmp;
+-	struct btrfs_ioctl_same_args *same;
++	struct btrfs_ioctl_same_args *same = NULL;
+ 	struct btrfs_ioctl_same_extent_info *info;
+ 	struct inode *src = file->f_dentry->d_inode;
+ 	struct file *dst_file = NULL;
+@@ -2833,6 +2833,7 @@ next:
+ 
+ out:
+ 	mnt_drop_write_file(file);
++	kfree(same);
+ 	return ret;
+ }
+ 
+-- 
+2.43.0
+

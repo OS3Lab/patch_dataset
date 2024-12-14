@@ -1,0 +1,47 @@
+From 0ac1d5582bd18d086902adca2e925f632fe17d53 Mon Sep 17 00:00:00 2001
+From: Yishai Hadas <yishaih@mellanox.com>
+Date: Wed, 22 Jun 2016 17:27:30 +0300
+Subject: [PATCH] IB/mlx4: Verify port number in flow steering create flow
+
+commit 5533c18ab02b17a7f2ac11908e2d97d4b421617d upstream.
+
+In procedure mlx4_ib_create_flow, passing an invalid port number
+will cause an out-of-bounds array access. Data passed to this procedure
+can come from user-space.  Therefore, need to validate port number
+before proceeding onwards.
+
+Note that we check against the number of physical ports declared at
+the verbs (ib core) level; When bonding is active, the verbs level
+sees one physical port, even though the low-level driver sees two ports.
+
+Fixes: f77c0162a339 ("IB/mlx4: Add receive flow steering support")
+Signed-off-by: Yishai Hadas <yishaih@mellanox.com>
+Reviewed-by: Jack Morgenstein <jackm@dev.mellanox.co.il>
+Reviewed-by: Moni Shoua <monis@mellanox.com>
+Signed-off-by: Leon Romanovsky <leon@kernel.org>
+Signed-off-by: Doug Ledford <dledford@redhat.com>
+[bwh: Backported to 3.16:
+ - Adjust context
+ - Function returns an integer, not a pointer/error]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/infiniband/hw/mlx4/main.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/infiniband/hw/mlx4/main.c b/drivers/infiniband/hw/mlx4/main.c
+index e48e96528657..85c47a0e524c 100644
+--- a/drivers/infiniband/hw/mlx4/main.c
++++ b/drivers/infiniband/hw/mlx4/main.c
+@@ -1016,6 +1016,9 @@ static int __mlx4_ib_create_flow(struct ib_qp *qp, struct ib_flow_attr *flow_att
+ 		[IB_FLOW_DOMAIN_NIC] = MLX4_DOMAIN_NIC,
+ 	};
+ 
++	if (flow_attr->port < 1 || flow_attr->port > qp->device->phys_port_cnt)
++		return -EINVAL;
++
+ 	if (flow_attr->priority > MLX4_IB_FLOW_MAX_PRIO) {
+ 		pr_err("Invalid priority value %d\n", flow_attr->priority);
+ 		return -EINVAL;
+-- 
+2.43.0
+

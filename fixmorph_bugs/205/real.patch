@@ -1,0 +1,38 @@
+From cddddea5a5ddae7cd61b54de55f91b3668c10eca Mon Sep 17 00:00:00 2001
+From: Liam Breck <liam@networkimprov.net>
+Date: Wed, 18 Jan 2017 09:26:49 -0800
+Subject: [PATCH] power: supply: bq24190_charger: Call set_mode_host() on
+ pm_resume()
+
+commit e05ad7e0741ce0505e1df157c62b22b95172bb97 upstream.
+
+pm_resume() does a register_reset() which clears charger host mode.
+
+Fix by calling set_mode_host() after the reset.
+
+Fixes: d7bf353fd0aa3 ("bq24190_charger: Add support for TI BQ24190 Battery Charger")
+Signed-off-by: Liam Breck <kernel@networkimprov.net>
+Acked-by: Mark Greer <mgreer@animalcreek.com>
+Acked-by: Tony Lindgren <tony@atomide.com>
+Signed-off-by: Sebastian Reichel <sre@kernel.org>
+[bwh: Backported to 3.16: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/power/bq24190_charger.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/power/bq24190_charger.c b/drivers/power/bq24190_charger.c
+index 5c2d62f1e7ea..661afd10d85a 100644
+--- a/drivers/power/bq24190_charger.c
++++ b/drivers/power/bq24190_charger.c
+@@ -1496,6 +1496,7 @@ static int bq24190_pm_resume(struct device *dev)
+ 
+ 	pm_runtime_get_sync(bdi->dev);
+ 	bq24190_register_reset(bdi);
++	bq24190_set_mode_host(bdi);
+ 	pm_runtime_put_sync(bdi->dev);
+ 
+ 	/* Things may have changed while suspended so alert upper layer */
+-- 
+2.43.0
+

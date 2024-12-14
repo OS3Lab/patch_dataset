@@ -1,0 +1,44 @@
+From b829502b93d7dc1d6c2bd220b1d3137155517d10 Mon Sep 17 00:00:00 2001
+From: Alexey Dobriyan <adobriyan@gmail.com>
+Date: Fri, 8 Jul 2016 01:39:11 +0300
+Subject: [PATCH] posix_cpu_timer: Exit early when process has been reaped
+
+commit 2c13ce8f6b2f6fd9ba2f9261b1939fc0f62d1307 upstream.
+
+Variable "now" seems to be genuinely used unintialized
+if branch
+
+	if (CPUCLOCK_PERTHREAD(timer->it_clock)) {
+
+is not taken and branch
+
+	if (unlikely(sighand == NULL)) {
+
+is taken. In this case the process has been reaped and the timer is marked as
+disarmed anyway. So none of the postprocessing of the sample is
+required. Return right away.
+
+Signed-off-by: Alexey Dobriyan <adobriyan@gmail.com>
+Link: http://lkml.kernel.org/r/20160707223911.GA26483@p183.telecom.by
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+[bwh: Backported to 3.16: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ kernel/posix-cpu-timers.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/kernel/posix-cpu-timers.c b/kernel/posix-cpu-timers.c
+index 3b8946416a5f..4bd1dd7db1a1 100644
+--- a/kernel/posix-cpu-timers.c
++++ b/kernel/posix-cpu-timers.c
+@@ -798,6 +798,7 @@ static void posix_cpu_timer_get(struct k_itimer *timer, struct itimerspec *itp)
+ 			timer->it.cpu.expires = 0;
+ 			sample_to_timespec(timer->it_clock, timer->it.cpu.expires,
+ 					   &itp->it_value);
++			return;
+ 		} else {
+ 			cpu_timer_sample_group(timer->it_clock, p, &now);
+ 			unlock_task_sighand(p, &flags);
+-- 
+2.43.0
+

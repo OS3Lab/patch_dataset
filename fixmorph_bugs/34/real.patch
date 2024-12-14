@@ -1,0 +1,45 @@
+From 18d11b1d7785434cb791d49cd72f490e7b1dc5bc Mon Sep 17 00:00:00 2001
+From: Linus Walleij <linus.walleij@linaro.org>
+Date: Fri, 17 Jun 2016 15:22:24 +0200
+Subject: [PATCH] iio: accel: kxsd9: fix the usage of spi_w8r8()
+
+commit 0c1f91b98552da49d9d8eed32b3132a58d2f4598 upstream.
+
+These two spi_w8r8() calls return a value with is used by the code
+following the error check. The dubious use was caused by a cleanup
+patch.
+
+Fixes: d34dbee8ac8e ("staging:iio:accel:kxsd9 cleanup and conversion to iio_chan_spec.")
+Signed-off-by: Linus Walleij <linus.walleij@linaro.org>
+Signed-off-by: Jonathan Cameron <jic23@kernel.org>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/staging/iio/accel/kxsd9.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/staging/iio/accel/kxsd9.c b/drivers/staging/iio/accel/kxsd9.c
+index 5238503f6805..5541ed38e090 100644
+--- a/drivers/staging/iio/accel/kxsd9.c
++++ b/drivers/staging/iio/accel/kxsd9.c
+@@ -81,7 +81,7 @@ static int kxsd9_write_scale(struct iio_dev *indio_dev, int micro)
+ 
+ 	mutex_lock(&st->buf_lock);
+ 	ret = spi_w8r8(st->us, KXSD9_READ(KXSD9_REG_CTRL_C));
+-	if (ret)
++	if (ret < 0)
+ 		goto error_ret;
+ 	st->tx[0] = KXSD9_WRITE(KXSD9_REG_CTRL_C);
+ 	st->tx[1] = (ret & ~KXSD9_FS_MASK) | i;
+@@ -166,7 +166,7 @@ static int kxsd9_read_raw(struct iio_dev *indio_dev,
+ 		break;
+ 	case (1 << IIO_CHAN_INFO_SCALE_SHARED):
+ 		ret = spi_w8r8(st->us, KXSD9_READ(KXSD9_REG_CTRL_C));
+-		if (ret)
++		if (ret < 0)
+ 			goto error_ret;
+ 		*val2 = kxsd9_micro_scales[ret & KXSD9_FS_MASK];
+ 		ret = IIO_VAL_INT_PLUS_MICRO;
+-- 
+2.43.0
+

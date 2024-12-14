@@ -1,0 +1,36 @@
+From 87e0b5757eab598f4b55babdc8879e143a556b7a Mon Sep 17 00:00:00 2001
+From: Paolo Bonzini <pbonzini@redhat.com>
+Date: Mon, 21 Mar 2016 12:33:00 +0100
+Subject: [PATCH] KVM: x86: mask CPUID(0xD,0x1).EAX against host value
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+[ Upstream commit 316314cae15fb0e3869b76b468f59a0c83ac3d4e ]
+
+This ensures that the guest doesn't see XSAVE extensions
+(e.g. xgetbv1 or xsavec) that the host lacks.
+
+Cc: stable@vger.kernel.org
+Reviewed-by: Radim Krčmář <rkrcmar@redhat.com>
+Signed-off-by: Paolo Bonzini <pbonzini@redhat.com>
+Signed-off-by: Sasha Levin <sasha.levin@oracle.com>
+---
+ arch/x86/kvm/cpuid.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/x86/kvm/cpuid.c b/arch/x86/kvm/cpuid.c
+index 1d08ad3582d0..090aa5c1d6b1 100644
+--- a/arch/x86/kvm/cpuid.c
++++ b/arch/x86/kvm/cpuid.c
+@@ -501,6 +501,7 @@ static inline int __do_cpuid_ent(struct kvm_cpuid_entry2 *entry, u32 function,
+ 			do_cpuid_1_ent(&entry[i], function, idx);
+ 			if (idx == 1) {
+ 				entry[i].eax &= kvm_supported_word10_x86_features;
++				cpuid_mask(&entry[i].eax, 10);
+ 				entry[i].ebx = 0;
+ 				if (entry[i].eax & (F(XSAVES)|F(XSAVEC)))
+ 					entry[i].ebx =
+-- 
+2.43.0
+

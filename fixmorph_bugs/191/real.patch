@@ -1,0 +1,48 @@
+From 5f18d55c3a82551ad1ec50a2c1668e475a5f3f00 Mon Sep 17 00:00:00 2001
+From: Malcolm Priestley <tvboxspy@gmail.com>
+Date: Mon, 31 Aug 2015 06:13:45 -0300
+Subject: [PATCH] media: dvb-core: Don't force CAN_INVERSION_AUTO in oneshot
+ mode
+
+commit c9d57de6103e343f2d4e04ea8d9e417e10a24da7 upstream.
+
+When in FE_TUNE_MODE_ONESHOT the frontend must report
+the actual capabilities so user can take appropriate
+action.
+
+With frontends that can't do auto inversion this is done
+by dvb-core automatically so CAN_INVERSION_AUTO is valid.
+
+However, when in FE_TUNE_MODE_ONESHOT this is not true.
+
+So only set FE_CAN_INVERSION_AUTO in modes other than
+FE_TUNE_MODE_ONESHOT
+
+Signed-off-by: Malcolm Priestley <tvboxspy@gmail.com>
+Signed-off-by: Mauro Carvalho Chehab <mchehab@osg.samsung.com>
+[bwh: Backported to 3.2: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/media/dvb/dvb-core/dvb_frontend.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/dvb/dvb-core/dvb_frontend.c b/drivers/media/dvb/dvb-core/dvb_frontend.c
+index 2c0acdb4d811..505374def72a 100644
+--- a/drivers/media/dvb/dvb-core/dvb_frontend.c
++++ b/drivers/media/dvb/dvb-core/dvb_frontend.c
+@@ -1661,9 +1661,9 @@ static int dvb_frontend_ioctl_legacy(struct file *file,
+ 		memcpy(info, &fe->ops.info, sizeof(struct dvb_frontend_info));
+ 		dvb_frontend_get_frequency_limits(fe, &info->frequency_min, &info->frequency_max);
+ 
+-		/* Force the CAN_INVERSION_AUTO bit on. If the frontend doesn't
+-		 * do it, it is done for it. */
+-		info->caps |= FE_CAN_INVERSION_AUTO;
++		/* Set CAN_INVERSION_AUTO bit on in other than oneshot mode */
++		if (!(fepriv->tune_mode_flags & FE_TUNE_MODE_ONESHOT))
++			info->caps |= FE_CAN_INVERSION_AUTO;
+ 		err = 0;
+ 		break;
+ 	}
+-- 
+2.43.0
+

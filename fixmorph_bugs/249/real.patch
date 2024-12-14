@@ -1,0 +1,60 @@
+From bd68778931b0e87a216702aedbfeb5c00f430061 Mon Sep 17 00:00:00 2001
+From: Srinivas Pandruvada <srinivas.pandruvada@linux.intel.com>
+Date: Tue, 7 Jun 2016 17:38:53 -0700
+Subject: [PATCH] cpufreq: intel_pstate: Fix ->set_policy() interface for
+ no_turbo
+
+commit 983e600e88835f0321d1a0ea06f52d48b7b5a544 upstream.
+
+When turbo is disabled, the ->set_policy() interface is broken.
+
+For example, when turbo is disabled and cpuinfo.max = 2900000 (full
+max turbo frequency), setting the limits results in frequency less
+than the requested one:
+Set 1000000 KHz results in 0700000 KHz
+Set 1500000 KHz results in 1100000 KHz
+Set 2000000 KHz results in  1500000 KHz
+
+This is because the limits->max_perf fraction is calculated using
+the max turbo frequency as the reference, but when the max P-State is
+capped in intel_pstate_get_min_max(), the reference is not the max
+turbo P-State. This results in reducing max P-State.
+
+One option is to always use max turbo as reference for calculating
+limits. But this will not be correct. By definition the intel_pstate
+sysfs limits, shows percentage of available performance. So when
+BIOS has disabled turbo, the available performance is max non turbo.
+So the max_perf_pct should still show 100%.
+
+Signed-off-by: Srinivas Pandruvada <srinivas.pandruvada@linux.intel.com>
+[ rjw : Subject & changelog, rewrite in fewer lines of code ]
+Signed-off-by: Rafael J. Wysocki <rafael.j.wysocki@intel.com>
+[bwh: Backported to 3.16:
+ - limits is a perf_limits structure, not a pointer to it
+ - Adjust context]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/cpufreq/intel_pstate.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/cpufreq/intel_pstate.c b/drivers/cpufreq/intel_pstate.c
+index dad4346189ae..087b5c32a6a1 100644
+--- a/drivers/cpufreq/intel_pstate.c
++++ b/drivers/cpufreq/intel_pstate.c
+@@ -877,8 +877,11 @@ static int intel_pstate_cpu_init(struct cpufreq_policy *policy)
+ 
+ 	/* cpuinfo and default policy values */
+ 	policy->cpuinfo.min_freq = cpu->pstate.min_pstate * cpu->pstate.scaling;
+-	policy->cpuinfo.max_freq =
+-		cpu->pstate.turbo_pstate * cpu->pstate.scaling;
++	update_turbo_state();
++	policy->cpuinfo.max_freq = limits.turbo_disabled ?
++			cpu->pstate.max_pstate : cpu->pstate.turbo_pstate;
++	policy->cpuinfo.max_freq *= cpu->pstate.scaling;
++
+ 	policy->cpuinfo.transition_latency = CPUFREQ_ETERNAL;
+ 	cpumask_set_cpu(policy->cpu, policy->cpus);
+ 
+-- 
+2.43.0
+

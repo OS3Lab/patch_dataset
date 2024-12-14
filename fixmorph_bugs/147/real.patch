@@ -1,0 +1,43 @@
+From a1754697ffb36173b1804416fd5cc768bbbc47ad Mon Sep 17 00:00:00 2001
+From: Chi-hsien Lin <Chi-Hsien.Lin@cypress.com>
+Date: Thu, 18 May 2017 17:22:19 +0800
+Subject: [PATCH] brcmfmac: remove setting IBSS mode when stopping AP
+
+[ Upstream commit 9029679f66d976f8c720eb03c4898274803c9923 ]
+
+Upon stopping an AP interface the driver disable INFRA mode effectively
+setting the interface in IBSS mode. However, this may affect other
+interfaces running in INFRA mode. For instance, if user creates and stops
+hostap daemon on virtual interface, then association cannot work on
+primary interface because default BSS has been set to IBSS mode in
+firmware side. The IBSS mode should be set when cfg80211 changes the
+interface.
+
+Reviewed-by: Wright Feng <wright.feng@cypress.com>
+Signed-off-by: Chi-hsien Lin <Chi-Hsien.Lin@cypress.com>
+[kvalo@codeaurora.org: rephased commit log based on discussion]
+Signed-off-by: Wright Feng <wright.feng@cypress.com>
+Signed-off-by: Kalle Valo <kvalo@codeaurora.org>
+
+Signed-off-by: Sasha Levin <alexander.levin@verizon.com>
+---
+ drivers/net/wireless/brcm80211/brcmfmac/cfg80211.c | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/drivers/net/wireless/brcm80211/brcmfmac/cfg80211.c b/drivers/net/wireless/brcm80211/brcmfmac/cfg80211.c
+index ab9f55344acd..89d8109a8a47 100644
+--- a/drivers/net/wireless/brcm80211/brcmfmac/cfg80211.c
++++ b/drivers/net/wireless/brcm80211/brcmfmac/cfg80211.c
+@@ -4207,9 +4207,6 @@ static int brcmf_cfg80211_stop_ap(struct wiphy *wiphy, struct net_device *ndev)
+ 		err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0);
+ 		if (err < 0)
+ 			brcmf_err("setting AP mode failed %d\n", err);
+-		err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, 0);
+-		if (err < 0)
+-			brcmf_err("setting INFRA mode failed %d\n", err);
+ 		if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MBSS))
+ 			brcmf_fil_iovar_int_set(ifp, "mbss", 0);
+ 		err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_REGULATORY,
+-- 
+2.43.0
+

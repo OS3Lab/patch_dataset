@@ -1,0 +1,48 @@
+From aafa57f9e7ff0e0b20404f648526fa6db632a57c Mon Sep 17 00:00:00 2001
+From: Christophe JAILLET <christophe.jaillet@wanadoo.fr>
+Date: Wed, 22 Nov 2017 21:31:20 +0100
+Subject: [PATCH] power: supply: ab8500_charger: Bail out in case of error in
+ 'ab8500_charger_init_hw_registers()'
+
+commit 09edcb647542487864e23aa8d2ef26be3e08978a upstream.
+
+If an error occurs when we enable the backup battery charging, we should
+go through the error handling path directly.
+
+Before commit db43e6c473b5 ("ab8500-bm: Add usb power path support") this
+was the case, but this commit has added some code between the last test and
+the 'out' label.
+So, in case of error, this added code is executed and the error may be
+silently ignored.
+
+Fix it by adding the missing 'goto out', as done in all other error
+handling paths.
+
+Fixes: db43e6c473b5 ("ab8500-bm: Add usb power path support")
+Signed-off-by: Christophe JAILLET <christophe.jaillet@wanadoo.fr>
+Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.co.uk>
+[bwh: Backported to 3.16: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/power/ab8500_charger.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/power/ab8500_charger.c b/drivers/power/ab8500_charger.c
+index fbbe64e4c86a..bae3f31493cd 100644
+--- a/drivers/power/ab8500_charger.c
++++ b/drivers/power/ab8500_charger.c
+@@ -3227,8 +3227,10 @@ static int ab8500_charger_init_hw_registers(struct ab8500_charger *di)
+ 	ret = abx500_mask_and_set_register_interruptible(di->dev,
+ 		AB8500_RTC, AB8500_RTC_CTRL_REG,
+ 		RTC_BUP_CH_ENA, RTC_BUP_CH_ENA);
+-	if (ret < 0)
++	if (ret < 0) {
+ 		dev_err(di->dev, "%s mask and set failed\n", __func__);
++		goto out;
++	}
+ 
+ 	if (is_ab8540(di->parent)) {
+ 		ret = abx500_mask_and_set_register_interruptible(di->dev,
+-- 
+2.43.0
+

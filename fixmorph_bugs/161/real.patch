@@ -1,0 +1,36 @@
+From 84ae82fe9d416ebf51ac66916c0693c1e1d4cc0f Mon Sep 17 00:00:00 2001
+From: Amitkumar Karwar <akarwar@marvell.com>
+Date: Tue, 23 Feb 2016 05:16:17 -0800
+Subject: [PATCH] mwifiex: fix corner case association failure
+
+commit a6139b6271f9f95377fe3486aed6120c9142779b upstream.
+
+This patch corrects the error case in association path by returning
+-1. Earlier "media_connected" used to remain on in this error case
+causing failure for further association attempts.
+
+Signed-off-by: Amitkumar Karwar <akarwar@marvell.com>
+Fixes: b887664d882ee4 ('mwifiex: channel switch handling for station')
+Signed-off-by: Cathy Luo <cluo@marvell.com>
+Signed-off-by: Kalle Valo <kvalo@codeaurora.org>
+[bwh: Backported to 3.16: adjust filename, context]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/net/wireless/mwifiex/sta_ioctl.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/net/wireless/mwifiex/sta_ioctl.c b/drivers/net/wireless/mwifiex/sta_ioctl.c
+index 536c14aa71f3..c73470569e6d 100644
+--- a/drivers/net/wireless/mwifiex/sta_ioctl.c
++++ b/drivers/net/wireless/mwifiex/sta_ioctl.c
+@@ -308,6 +308,7 @@ int mwifiex_bss_start(struct mwifiex_private *priv, struct cfg80211_bss *bss,
+ 			dev_err(adapter->dev,
+ 				"Attempt to reconnect on csa closed chan(%d)\n",
+ 				bss_desc->channel);
++			ret = -1;
+ 			goto done;
+ 		}
+ 
+-- 
+2.43.0
+

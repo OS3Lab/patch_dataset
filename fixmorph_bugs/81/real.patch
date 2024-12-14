@@ -1,0 +1,90 @@
+From 6243715124099a2bac7b57441fded861b242f03b Mon Sep 17 00:00:00 2001
+From: Philip Oberstaller <Philip.Oberstaller@septentrio.com>
+Date: Fri, 27 Mar 2015 17:42:18 +0100
+Subject: [PATCH] usb: gadget: serial: fix re-ordering of tx data
+
+commit 3e9d3d2efc677b501b12512cab5adb4f32a0673a upstream.
+
+When a single thread is sending out data over the gadget serial port,
+gs_start_tx() will be called both from the sender context and from the
+write completion. Since the port lock is released before the packet is
+queued, the order in which the URBs are submitted is not guaranteed.
+E.g.
+
+  sending thread                      completion (interrupt)
+
+  gs_write()
+    LOCK
+                                      gs_write_complete()
+                                        LOCK (wait)
+    gs_start_tx()
+      req1 = list_entry(pool->next)
+      UNLOCK
+                                        LOCK (acquired)
+                                        gs_start_tx()
+                                          req2 = list_entry(pool->next)
+                                          UNLOCK
+                                          usb_ep_queue(req2)
+      usb_ep_queue(req1)
+
+I.e., req2 is submitted before req1 but it contains the data that
+comes after req1.
+
+To reproduce, use SMP with sending thread and completion pinned to
+different CPUs, or use PREEMPT_RT, and add the following delay just
+before the call to usb_ep_queue():
+
+		if (port->write_started > 0 && !list_empty(pool))
+			udelay(1000);
+
+To work around this problem, make sure that only one thread is running
+through the gs_start_tx() loop with an extra flag write_busy. Since
+gs_start_tx() is always called with the port lock held, no further
+synchronisation is needed. The original caller will continue through
+the loop when the request was successfully submitted.
+
+Signed-off-by: Philip Oberstaller <Philip.Oberstaller@septentrio.com>
+Signed-off-by: Arnout Vandecappelle (Essensium/Mind) <arnout@mind.be>
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+[bwh: Backported to 3.16: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/usb/gadget/u_serial.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/gadget/u_serial.c b/drivers/usb/gadget/u_serial.c
+index ad0aca812002..005acdeb2e89 100644
+--- a/drivers/usb/gadget/u_serial.c
++++ b/drivers/usb/gadget/u_serial.c
+@@ -116,6 +116,7 @@ struct gs_port {
+ 	int write_allocated;
+ 	struct gs_buf		port_write_buf;
+ 	wait_queue_head_t	drain_wait;	/* wait while writes drain */
++	bool                    write_busy;
+ 
+ 	/* REVISIT this state ... */
+ 	struct usb_cdc_line_coding port_line_coding;	/* 8-N-1 etc */
+@@ -366,7 +367,7 @@ __acquires(&port->port_lock)
+ 	int			status = 0;
+ 	bool			do_tty_wake = false;
+ 
+-	while (!list_empty(pool)) {
++	while (!port->write_busy && !list_empty(pool)) {
+ 		struct usb_request	*req;
+ 		int			len;
+ 
+@@ -396,9 +397,11 @@ __acquires(&port->port_lock)
+ 		 * NOTE that we may keep sending data for a while after
+ 		 * the TTY closed (dev->ioport->port_tty is NULL).
+ 		 */
++		port->write_busy = true;
+ 		spin_unlock(&port->port_lock);
+ 		status = usb_ep_queue(in, req, GFP_ATOMIC);
+ 		spin_lock(&port->port_lock);
++		port->write_busy = false;
+ 
+ 		if (status) {
+ 			pr_debug("%s: %s %s err %d\n",
+-- 
+2.43.0
+

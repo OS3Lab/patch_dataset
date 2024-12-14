@@ -1,0 +1,47 @@
+From 8d2311b91361f1dedfafd81778c1826b3ea3fa3a Mon Sep 17 00:00:00 2001
+From: Oliver Neukum <oneukum@suse.com>
+Date: Tue, 14 Mar 2017 12:09:56 +0100
+Subject: [PATCH] ACM gadget: fix endianness in notifications
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+commit cdd7928df0d2efaa3270d711963773a08a4cc8ab upstream.
+
+The gadget code exports the bitfield for serial status changes
+over the wire in its internal endianness. The fix is to convert
+to little endian before sending it over the wire.
+
+Signed-off-by: Oliver Neukum <oneukum@suse.com>
+Tested-by: 家瑋 <momo1208@gmail.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+[bwh: Backported to 3.2: adjust filename, context]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/usb/gadget/f_acm.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/gadget/f_acm.c b/drivers/usb/gadget/f_acm.c
+index 3f8849339ade..c3c43c86e33d 100644
+--- a/drivers/usb/gadget/f_acm.c
++++ b/drivers/usb/gadget/f_acm.c
+@@ -497,13 +497,15 @@ static int acm_notify_serial_state(struct f_acm *acm)
+ {
+ 	struct usb_composite_dev *cdev = acm->port.func.config->cdev;
+ 	int			status;
++	__le16			serial_state;
+ 
+ 	spin_lock(&acm->lock);
+ 	if (acm->notify_req) {
+ 		DBG(cdev, "acm ttyGS%d serial state %04x\n",
+ 				acm->port_num, acm->serial_state);
++		serial_state = cpu_to_le16(acm->serial_state);
+ 		status = acm_cdc_notify(acm, USB_CDC_NOTIFY_SERIAL_STATE,
+-				0, &acm->serial_state, sizeof(acm->serial_state));
++				0, &serial_state, sizeof(acm->serial_state));
+ 	} else {
+ 		acm->pending = true;
+ 		status = 0;
+-- 
+2.43.0
+

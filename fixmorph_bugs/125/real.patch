@@ -1,0 +1,61 @@
+From a8420aea8a05f7965845a27ebf23d499de4829b8 Mon Sep 17 00:00:00 2001
+From: Eryu Guan <guaneryu@gmail.com>
+Date: Thu, 22 Mar 2018 11:41:25 -0400
+Subject: [PATCH] ext4: protect i_disksize update by i_data_sem in direct write
+ path
+
+commit 73fdad00b208b139cf43f3163fbc0f67e4c6047c upstream.
+
+i_disksize update should be protected by i_data_sem, by either taking
+the lock explicitly or by using ext4_update_i_disksize() helper. But the
+i_disksize updates in ext4_direct_IO_write() are not protected at all,
+which may be racing with i_disksize updates in writeback path in
+delalloc buffer write path.
+
+This is found by code inspection, and I didn't hit any i_disksize
+corruption due to this bug. Thanks to Jan Kara for catching this bug and
+suggesting the fix!
+
+Reported-by: Jan Kara <jack@suse.cz>
+Suggested-by: Jan Kara <jack@suse.cz>
+Signed-off-by: Eryu Guan <guaneryu@gmail.com>
+Signed-off-by: Theodore Ts'o <tytso@mit.edu>
+[bwh: Backported to 3.16: The relevant code is in ext4_ind_direct_IO()]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ fs/ext4/indirect.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/fs/ext4/indirect.c b/fs/ext4/indirect.c
+index 0c9ed67fe055..8df46f49a3d5 100644
+--- a/fs/ext4/indirect.c
++++ b/fs/ext4/indirect.c
+@@ -649,7 +649,6 @@ ssize_t ext4_ind_direct_IO(int rw, struct kiocb *iocb,
+ {
+ 	struct file *file = iocb->ki_filp;
+ 	struct inode *inode = file->f_mapping->host;
+-	struct ext4_inode_info *ei = EXT4_I(inode);
+ 	handle_t *handle;
+ 	ssize_t ret;
+ 	int orphan = 0;
+@@ -672,7 +671,7 @@ ssize_t ext4_ind_direct_IO(int rw, struct kiocb *iocb,
+ 				goto out;
+ 			}
+ 			orphan = 1;
+-			ei->i_disksize = inode->i_size;
++			ext4_update_i_disksize(inode, inode->i_size);
+ 			ext4_journal_stop(handle);
+ 		}
+ 	}
+@@ -731,7 +730,7 @@ locked:
+ 		if (ret > 0) {
+ 			loff_t end = offset + ret;
+ 			if (end > inode->i_size) {
+-				ei->i_disksize = end;
++				ext4_update_i_disksize(inode, end);
+ 				i_size_write(inode, end);
+ 				/*
+ 				 * We're going to return a positive `ret'
+-- 
+2.43.0
+

@@ -1,0 +1,44 @@
+From cbb26268a26b53f3d0a92c39265ff90a43ffdaa2 Mon Sep 17 00:00:00 2001
+From: Shuah Khan <shuahkh@osg.samsung.com>
+Date: Wed, 11 Apr 2018 18:13:30 -0600
+Subject: [PATCH] usbip: usbip_host: refine probe and disconnect debug msgs to
+ be useful
+
+commit 28b68acc4a88dcf91fd1dcf2577371dc9bf574cc upstream.
+
+Refine probe and disconnect debug msgs to be useful and say what is
+in progress.
+
+Signed-off-by: Shuah Khan <shuahkh@osg.samsung.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+[bwh: Backported to 3.16: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/staging/usbip/stub_dev.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/staging/usbip/stub_dev.c b/drivers/staging/usbip/stub_dev.c
+index aea74e8ba62e..9e8ea396bcb0 100644
+--- a/drivers/staging/usbip/stub_dev.c
++++ b/drivers/staging/usbip/stub_dev.c
+@@ -343,7 +343,7 @@ static int stub_probe(struct usb_device *udev)
+ 	struct bus_id_priv *busid_priv;
+ 	int rc;
+ 
+-	dev_dbg(&udev->dev, "Enter\n");
++	dev_dbg(&udev->dev, "Enter probe\n");
+ 
+ 	/* check we should claim or not by busid_table */
+ 	busid_priv = get_busid_priv(udev_busid);
+@@ -446,7 +446,7 @@ static void stub_disconnect(struct usb_device *udev)
+ 	struct bus_id_priv *busid_priv;
+ 	int rc;
+ 
+-	dev_dbg(&udev->dev, "Enter\n");
++	dev_dbg(&udev->dev, "Enter disconnect\n");
+ 
+ 	busid_priv = get_busid_priv(udev_busid);
+ 	if (!busid_priv) {
+-- 
+2.43.0
+

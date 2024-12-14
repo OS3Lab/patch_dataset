@@ -1,0 +1,36 @@
+From 29002321516dd7a79e4840d3800a86f2aaa070c3 Mon Sep 17 00:00:00 2001
+From: "Gustavo A. R. Silva" <gustavo@embeddedor.com>
+Date: Mon, 6 Aug 2018 07:14:51 -0500
+Subject: [PATCH] ASoC: wm8994: Fix missing break in switch
+
+commit ad0eaee6195db1db1749dd46b9e6f4466793d178 upstream.
+
+Add missing break statement in order to prevent the code from falling
+through to the default case.
+
+Addresses-Coverity-ID: 115050 ("Missing break in switch")
+Reported-by: Valdis Kletnieks <valdis.kletnieks@vt.edu>
+Signed-off-by: Gustavo A. R. Silva <gustavo@embeddedor.com>
+Acked-by: Charles Keepax <ckeepax@opensource.cirrus.com>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ sound/soc/codecs/wm8994.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/sound/soc/codecs/wm8994.c b/sound/soc/codecs/wm8994.c
+index 14258dd51f5e..1105528aa746 100644
+--- a/sound/soc/codecs/wm8994.c
++++ b/sound/soc/codecs/wm8994.c
+@@ -2427,7 +2427,7 @@ static int wm8994_set_dai_sysclk(struct snd_soc_dai *dai,
+ 			snd_soc_update_bits(codec, WM8994_POWER_MANAGEMENT_2,
+ 					    WM8994_OPCLK_ENA, 0);
+ 		}
+-		/* fall through */
++		break;
+ 
+ 	default:
+ 		return -EINVAL;
+-- 
+2.43.0
+

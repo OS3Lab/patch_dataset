@@ -1,0 +1,54 @@
+From 3d88d87fdbce622d94d66acb1cfd81c7e4e8483f Mon Sep 17 00:00:00 2001
+From: Sven Eckelmann <sven@narfation.org>
+Date: Sun, 26 Jun 2016 11:16:13 +0200
+Subject: [PATCH] batman-adv: Clean up untagged vlan when destroying via
+ rtnl-link
+
+commit 420cb1b764f9169c5d2601b4af90e4a1702345ee upstream.
+
+The untagged vlan object is only destroyed when the interface is removed
+via the legacy sysfs interface. But it also has to be destroyed when the
+standard rtnl-link interface is used.
+
+Fixes: 5d2c05b21337 ("batman-adv: add per VLAN interface attribute framework")
+Signed-off-by: Sven Eckelmann <sven@narfation.org>
+Acked-by: Antonio Quartulli <a@unstable.cc>
+Signed-off-by: Marek Lindner <mareklindner@neomailbox.ch>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+[bwh: Backported to 3.16: s/_put/_free_ref/]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ net/batman-adv/soft-interface.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/net/batman-adv/soft-interface.c b/net/batman-adv/soft-interface.c
+index ad40f170824d..765c89ccc3fb 100644
+--- a/net/batman-adv/soft-interface.c
++++ b/net/batman-adv/soft-interface.c
+@@ -975,7 +975,9 @@ void batadv_softif_destroy_sysfs(struct net_device *soft_iface)
+ static void batadv_softif_destroy_netlink(struct net_device *soft_iface,
+ 					  struct list_head *head)
+ {
++	struct batadv_priv *bat_priv = netdev_priv(soft_iface);
+ 	struct batadv_hard_iface *hard_iface;
++	struct batadv_softif_vlan *vlan;
+ 
+ 	list_for_each_entry(hard_iface, &batadv_hardif_list, list) {
+ 		if (hard_iface->soft_iface == soft_iface)
+@@ -983,6 +985,13 @@ static void batadv_softif_destroy_netlink(struct net_device *soft_iface,
+ 							BATADV_IF_CLEANUP_KEEP);
+ 	}
+ 
++	/* destroy the "untagged" VLAN */
++	vlan = batadv_softif_vlan_get(bat_priv, BATADV_NO_FLAGS);
++	if (vlan) {
++		batadv_softif_destroy_vlan(bat_priv, vlan);
++		batadv_softif_vlan_free_ref(vlan);
++	}
++
+ 	batadv_sysfs_del_meshif(soft_iface);
+ 	unregister_netdevice_queue(soft_iface, head);
+ }
+-- 
+2.43.0
+

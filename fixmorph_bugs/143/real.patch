@@ -1,0 +1,37 @@
+From b61fc97ca5d5898c4621ef7785d7df53be5b10df Mon Sep 17 00:00:00 2001
+From: Nicholas Mc Guire <hofrat@osadl.org>
+Date: Fri, 29 Jun 2018 13:49:54 -0500
+Subject: [PATCH] PCI: xilinx: Add missing of_node_put()
+
+[ Upstream commit 8c3f9bd851a4d3acf0a0f222d4e9e41c0cd1ea8e ]
+
+The call to of_get_next_child() returns a node pointer with refcount
+incremented thus it must be explicitly decremented here after the last
+usage.
+
+Fixes: 8961def56845 ("PCI: xilinx: Add Xilinx AXI PCIe Host Bridge IP driver")
+Signed-off-by: Nicholas Mc Guire <hofrat@osadl.org>
+[lorenzo.pieralisi@arm.com: reworked commit log]
+Signed-off-by: Lorenzo Pieralisi <lorenzo.pieralisi@arm.com>
+Signed-off-by: Bjorn Helgaas <bhelgaas@google.com>
+Signed-off-by: Sasha Levin <alexander.levin@microsoft.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+---
+ drivers/pci/host/pcie-xilinx.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/pci/host/pcie-xilinx.c b/drivers/pci/host/pcie-xilinx.c
+index c8616fadccf1..61332f4d51c3 100644
+--- a/drivers/pci/host/pcie-xilinx.c
++++ b/drivers/pci/host/pcie-xilinx.c
+@@ -527,6 +527,7 @@ static int xilinx_pcie_init_irq_domain(struct xilinx_pcie_port *port)
+ 	port->leg_domain = irq_domain_add_linear(pcie_intc_node, 4,
+ 						 &intx_domain_ops,
+ 						 port);
++	of_node_put(pcie_intc_node);
+ 	if (!port->leg_domain) {
+ 		dev_err(dev, "Failed to get a INTx IRQ domain\n");
+ 		return -ENODEV;
+-- 
+2.43.0
+

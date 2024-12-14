@@ -1,0 +1,55 @@
+From 916f99656dc7d69355cb1045530c421cb1976590 Mon Sep 17 00:00:00 2001
+From: Alexander Duyck <aduyck@mirantis.com>
+Date: Tue, 9 Feb 2016 02:49:54 -0800
+Subject: [PATCH] flow_dissector: Fix unaligned access in __skb_flow_dissector
+ when used by eth_get_headlen
+
+[ Upstream commit 461547f3158978c180d74484d58e82be9b8e7357, since
+  we lack the flow dissector flags in this release we guard the
+  flow label access using a test on 'skb' being NULL ]
+
+This patch fixes an issue with unaligned accesses when using
+eth_get_headlen on a page that was DMA aligned instead of being IP aligned.
+The fact is when trying to check the length we don't need to be looking at
+the flow label so we can reorder the checks to first check if we are
+supposed to gather the flow label and then make the call to actually get
+it.
+
+v2:  Updated path so that either STOP_AT_FLOW_LABEL or KEY_FLOW_LABEL can
+     cause us to check for the flow label.
+
+Reported-by: Sowmini Varadhan <sowmini.varadhan@oracle.com>
+Signed-off-by: Alexander Duyck <aduyck@mirantis.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+Signed-off-by: Sasha Levin <sasha.levin@oracle.com>
+---
+ net/core/flow_dissector.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/net/core/flow_dissector.c b/net/core/flow_dissector.c
+index 2c35c02a931e..f96d2caa748c 100644
+--- a/net/core/flow_dissector.c
++++ b/net/core/flow_dissector.c
+@@ -113,7 +113,6 @@ ip:
+ 	case htons(ETH_P_IPV6): {
+ 		const struct ipv6hdr *iph;
+ 		struct ipv6hdr _iph;
+-		__be32 flow_label;
+ 
+ ipv6:
+ 		iph = __skb_header_pointer(skb, nhoff, sizeof(_iph), data, hlen, &_iph);
+@@ -130,8 +129,9 @@ ipv6:
+ 		flow->src = (__force __be32)ipv6_addr_hash(&iph->saddr);
+ 		flow->dst = (__force __be32)ipv6_addr_hash(&iph->daddr);
+ 
+-		flow_label = ip6_flowlabel(iph);
+-		if (flow_label) {
++		if (skb && ip6_flowlabel(iph)) {
++			__be32 flow_label = ip6_flowlabel(iph);
++
+ 			/* Awesome, IPv6 packet has a flow label so we can
+ 			 * use that to represent the ports without any
+ 			 * further dissection.
+-- 
+2.43.0
+

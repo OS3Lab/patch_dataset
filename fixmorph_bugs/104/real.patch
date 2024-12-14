@@ -1,0 +1,35 @@
+From 6117f18c8b41ac09dc988771589bac8798e92752 Mon Sep 17 00:00:00 2001
+From: Felipe Balbi <balbi@ti.com>
+Date: Fri, 13 Feb 2015 15:04:06 -0600
+Subject: [PATCH] usb: isp1760: hcd: use new USB_RESUME_TIMEOUT
+
+commit 59c9904cce77b55892e15f40791f1e66e4d3a1e6 upstream.
+
+Make sure we're using the new macro, so our
+resume signaling will always pass certification.
+
+Signed-off-by: Felipe Balbi <balbi@ti.com>
+[ luis: backported to 3.16:
+  - file rename: drivers/usb/isp1760/isp1760-hcd.c ->
+    drivers/usb/host/isp1760-hcd.c ]
+Signed-off-by: Luis Henriques <luis.henriques@canonical.com>
+---
+ drivers/usb/host/isp1760-hcd.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/usb/host/isp1760-hcd.c b/drivers/usb/host/isp1760-hcd.c
+index 5ea7c6bdfd28..6295b353bb65 100644
+--- a/drivers/usb/host/isp1760-hcd.c
++++ b/drivers/usb/host/isp1760-hcd.c
+@@ -1895,7 +1895,7 @@ static int isp1760_hub_control(struct usb_hcd *hcd, u16 typeReq,
+ 				reg_write32(hcd->regs, HC_PORTSC1,
+ 							temp | PORT_RESUME);
+ 				priv->reset_done = jiffies +
+-					msecs_to_jiffies(20);
++					msecs_to_jiffies(USB_RESUME_TIMEOUT);
+ 			}
+ 			break;
+ 		case USB_PORT_FEAT_C_SUSPEND:
+-- 
+2.43.0
+

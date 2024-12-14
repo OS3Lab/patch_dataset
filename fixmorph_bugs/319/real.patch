@@ -1,0 +1,44 @@
+From 2496cf83ff1b8fe099920430f2f6586ac9372171 Mon Sep 17 00:00:00 2001
+From: Johan Hovold <johan@kernel.org>
+Date: Thu, 20 Jul 2017 12:48:17 +0200
+Subject: [PATCH] pwm: tiehrpwm: fix clock imbalance in probe error path
+
+commit e2b5602af76dec75f474e4173afb4215007ecfa5 upstream.
+
+Make sure to unprepare the clock before returning on late probe errors.
+
+Fixes: b388f15fd14c ("pwm: pwm-tiehrpwm: Use clk_enable/disable instead clk_prepare/unprepare.")
+Signed-off-by: Johan Hovold <johan@kernel.org>
+Signed-off-by: Thierry Reding <thierry.reding@gmail.com>
+[bwh: Backported to 3.16: adjust context]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/pwm/pwm-tiehrpwm.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/pwm/pwm-tiehrpwm.c b/drivers/pwm/pwm-tiehrpwm.c
+index 6b8281a58069..95f1ea79e7b6 100644
+--- a/drivers/pwm/pwm-tiehrpwm.c
++++ b/drivers/pwm/pwm-tiehrpwm.c
+@@ -483,7 +483,7 @@ static int ehrpwm_pwm_probe(struct platform_device *pdev)
+ 	ret = pwmchip_add(&pc->chip);
+ 	if (ret < 0) {
+ 		dev_err(&pdev->dev, "pwmchip_add() failed: %d\n", ret);
+-		return ret;
++		goto err_clk_unprepare;
+ 	}
+ 
+ 	pm_runtime_enable(&pdev->dev);
+@@ -506,7 +506,9 @@ pwmss_clk_failure:
+ 	pm_runtime_put_sync(&pdev->dev);
+ 	pm_runtime_disable(&pdev->dev);
+ 	pwmchip_remove(&pc->chip);
++err_clk_unprepare:
+ 	clk_unprepare(pc->tbclk);
++
+ 	return ret;
+ }
+ 
+-- 
+2.43.0
+

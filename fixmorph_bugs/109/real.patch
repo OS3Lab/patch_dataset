@@ -1,0 +1,77 @@
+From ba4a679df78ffd52405af90aae3f4481c6945d6d Mon Sep 17 00:00:00 2001
+From: Peter Zijlstra <peterz@infradead.org>
+Date: Tue, 20 May 2014 15:49:48 +0200
+Subject: [PATCH] hrtimer: Allow concurrent hrtimer_start() for self restarting
+ timers
+
+commit 5de2755c8c8b3a6b8414870e2c284914a2b42e4d upstream.
+
+Because we drop cpu_base->lock around calling hrtimer::function, it is
+possible for hrtimer_start() to come in between and enqueue the timer.
+
+If hrtimer::function then returns HRTIMER_RESTART we'll hit the BUG_ON
+because HRTIMER_STATE_ENQUEUED will be set.
+
+Since the above is a perfectly valid scenario, remove the BUG_ON and
+make the enqueue_hrtimer() call conditional on the timer not being
+enqueued already.
+
+NOTE: in that concurrent scenario its entirely common for both sites
+to want to modify the hrtimer, since hrtimers don't provide
+serialization themselves be sure to provide some such that the
+hrtimer::function and the hrtimer_start() caller don't both try and
+fudge the expiration state at the same time.
+
+To that effect, add a WARN when someone tries to forward an already
+enqueued timer, the most common way to change the expiry of self
+restarting timers. Ideally we'd put the WARN in everything modifying
+the expiry but most of that is inlines and we don't need the bloat.
+
+Fixes: 2d44ae4d7135 ("hrtimer: clean up cpu->base locking tricks")
+Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Cc: Ben Segall <bsegall@google.com>
+Cc: Roman Gushchin <klamm@yandex-team.ru>
+Cc: Paul Turner <pjt@google.com>
+Link: http://lkml.kernel.org/r/20150415113105.GT5029@twins.programming.kicks-ass.net
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+[bwh: Backported to 3.2: adjust filename, context]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ kernel/hrtimer.c | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/kernel/hrtimer.c b/kernel/hrtimer.c
+index 20e88afba69b..d9ce3d484231 100644
+--- a/kernel/hrtimer.c
++++ b/kernel/hrtimer.c
+@@ -848,6 +848,9 @@ u64 hrtimer_forward(struct hrtimer *timer, ktime_t now, ktime_t interval)
+ 	if (delta.tv64 < 0)
+ 		return 0;
+ 
++	if (WARN_ON(timer->state & HRTIMER_STATE_ENQUEUED))
++		return 0;
++
+ 	if (interval.tv64 < timer->base->resolution.tv64)
+ 		interval.tv64 = timer->base->resolution.tv64;
+ 
+@@ -1260,11 +1263,14 @@ static void __run_hrtimer(struct hrtimer *timer, ktime_t *now)
+ 	 * Note: We clear the CALLBACK bit after enqueue_hrtimer and
+ 	 * we do not reprogramm the event hardware. Happens either in
+ 	 * hrtimer_start_range_ns() or in hrtimer_interrupt()
++	 *
++	 * Note: Because we dropped the cpu_base->lock above,
++	 * hrtimer_start_range_ns() can have popped in and enqueued the timer
++	 * for us already.
+ 	 */
+-	if (restart != HRTIMER_NORESTART) {
+-		BUG_ON(timer->state != HRTIMER_STATE_CALLBACK);
++	if (restart != HRTIMER_NORESTART &&
++	    !(timer->state & HRTIMER_STATE_ENQUEUED))
+ 		enqueue_hrtimer(timer, base);
+-	}
+ 
+ 	WARN_ON_ONCE(!(timer->state & HRTIMER_STATE_CALLBACK));
+ 
+-- 
+2.43.0
+

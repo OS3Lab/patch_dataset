@@ -1,0 +1,43 @@
+From df5a28b8505f81526167b6311fdb2d9fc8994233 Mon Sep 17 00:00:00 2001
+From: Pan Bian <bianpan2016@163.com>
+Date: Mon, 24 Apr 2017 16:22:08 +0800
+Subject: [PATCH] power: supply: isp1704: Fix unchecked return value of
+ devm_kzalloc
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+commit 8b20839988f1ed5e534b270f3776709b640dc7e0 upstream.
+
+Function devm_kzalloc() will return a NULL pointer. However, in function
+isp1704_charger_probe(), the return value of devm_kzalloc() is directly
+used without validation. This may result in a bad memory access bug.
+
+Fixes: 34a109610e2a ("isp1704_charger: Add DT support")
+Signed-off-by: Pan Bian <bianpan2016@163.com>
+Reviewed-by: Pali Rohár <pali.rohar@gmail.com>
+Signed-off-by: Sebastian Reichel <sebastian.reichel@collabora.co.uk>
+[bwh: Backported to 3.16: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/power/isp1704_charger.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/power/isp1704_charger.c b/drivers/power/isp1704_charger.c
+index 0b4cf9d63291..e5d88dd0a2f0 100644
+--- a/drivers/power/isp1704_charger.c
++++ b/drivers/power/isp1704_charger.c
+@@ -415,6 +415,10 @@ static int isp1704_charger_probe(struct platform_device *pdev)
+ 
+ 		pdata = devm_kzalloc(&pdev->dev,
+ 			sizeof(struct isp1704_charger_data), GFP_KERNEL);
++		if (!pdata) {
++			ret = -ENOMEM;
++			goto fail0;
++		}
+ 		pdata->enable_gpio = gpio;
+ 
+ 		dev_info(&pdev->dev, "init gpio %d\n", pdata->enable_gpio);
+-- 
+2.43.0
+

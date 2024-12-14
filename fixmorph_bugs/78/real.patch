@@ -1,0 +1,39 @@
+From 6d276ecc808f00628a0c3dbfe8c4b308745471b6 Mon Sep 17 00:00:00 2001
+From: Dan Carpenter <dan.carpenter@oracle.com>
+Date: Wed, 24 Oct 2018 11:33:34 +0300
+Subject: [PATCH] wireless: airo: potential buffer overflow in sprintf()
+
+commit 3d39e1bb1c88f32820c5f9271f2c8c2fb9a52bac upstream.
+
+It looks like we wanted to print a maximum of BSSList_rid.ssidLen bytes
+of the ssid, but we accidentally use "%*s" (width) instead of "%.*s"
+(precision) so if the ssid doesn't have a NUL terminator this could lead
+to an overflow.
+
+Static analysis.  Not tested.
+
+Fixes: e174961ca1a0 ("net: convert print_mac to %pM")
+Signed-off-by: Dan Carpenter <dan.carpenter@oracle.com>
+Signed-off-by: Kalle Valo <kvalo@codeaurora.org>
+[bwh: Backported to 3.16: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/net/wireless/airo.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/wireless/airo.c b/drivers/net/wireless/airo.c
+index 64747d457bb3..4fedd4560951 100644
+--- a/drivers/net/wireless/airo.c
++++ b/drivers/net/wireless/airo.c
+@@ -5469,7 +5469,7 @@ static int proc_BSSList_open( struct inode *inode, struct file *file ) {
+            we have to add a spin lock... */
+ 	rc = readBSSListRid(ai, doLoseSync, &BSSList_rid);
+ 	while(rc == 0 && BSSList_rid.index != cpu_to_le16(0xffff)) {
+-		ptr += sprintf(ptr, "%pM %*s rssi = %d",
++		ptr += sprintf(ptr, "%pM %.*s rssi = %d",
+ 			       BSSList_rid.bssid,
+ 				(int)BSSList_rid.ssidLen,
+ 				BSSList_rid.ssid,
+-- 
+2.43.0
+

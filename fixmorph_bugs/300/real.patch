@@ -1,0 +1,43 @@
+From 31a055ab230e77270be39fb4204f1d244953a3c7 Mon Sep 17 00:00:00 2001
+From: "Dmitry V. Levin" <ldv@altlinux.org>
+Date: Thu, 19 Mar 2015 11:10:54 +0000
+Subject: [PATCH] vfs: show_vfsstat: do not ignore errors from show_devname
+ method
+
+commit 5f8d498d4364f544fee17125787a47553db02afa upstream.
+
+Explicitly check show_devname method return code and bail out in case
+of an error.  This fixes regression introduced by commit 9d4d65748a5c.
+
+Signed-off-by: Dmitry V. Levin <ldv@altlinux.org>
+Signed-off-by: Al Viro <viro@zeniv.linux.org.uk>
+[bwh: Backported to 3.16: add the 'out' label]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ fs/proc_namespace.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/fs/proc_namespace.c b/fs/proc_namespace.c
+index 1a81373947f3..f39ff1c6a041 100644
+--- a/fs/proc_namespace.c
++++ b/fs/proc_namespace.c
+@@ -191,6 +191,8 @@ static int show_vfsstat(struct seq_file *m, struct vfsmount *mnt)
+ 	if (sb->s_op->show_devname) {
+ 		seq_puts(m, "device ");
+ 		err = sb->s_op->show_devname(m, mnt_path.dentry);
++		if (err)
++			goto out;
+ 	} else {
+ 		if (r->mnt_devname) {
+ 			seq_puts(m, "device ");
+@@ -216,6 +218,7 @@ static int show_vfsstat(struct seq_file *m, struct vfsmount *mnt)
+ 	}
+ 
+ 	seq_putc(m, '\n');
++out:
+ 	return err;
+ }
+ 
+-- 
+2.43.0
+

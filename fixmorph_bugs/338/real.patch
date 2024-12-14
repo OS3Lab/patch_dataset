@@ -1,0 +1,48 @@
+From fd3a84ea1b8650f6929462996f8d96d271f9d0d0 Mon Sep 17 00:00:00 2001
+From: Al Viro <viro@ZenIV.linux.org.uk>
+Date: Sun, 19 Feb 2017 07:15:27 +0000
+Subject: [PATCH] Fix missing sanity check in /dev/sg
+
+commit 137d01df511b3afe1f05499aea05f3bafc0fb221 upstream.
+
+What happens is that a write to /dev/sg is given a request with non-zero
+->iovec_count combined with zero ->dxfer_len.  Or with ->dxferp pointing
+to an array full of empty iovecs.
+
+Having write permission to /dev/sg shouldn't be equivalent to the
+ability to trigger BUG_ON() while holding spinlocks...
+
+Found by Dmitry Vyukov and syzkaller.
+
+[ The BUG_ON() got changed to a WARN_ON_ONCE(), but this fixes the
+  underlying issue.  - Linus ]
+
+Signed-off-by: Al Viro <viro@zeniv.linux.org.uk>
+Reported-by: Dmitry Vyukov <dvyukov@google.com>
+Reviewed-by: Christoph Hellwig <hch@lst.de>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+[bwh: Backported to 3.2: we're not using iov_iter, but can check the
+ byte length after truncation]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/scsi/sg.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/scsi/sg.c b/drivers/scsi/sg.c
+index fb59a49dd01d..43862f25c754 100644
+--- a/drivers/scsi/sg.c
++++ b/drivers/scsi/sg.c
+@@ -1710,6 +1710,10 @@ static int sg_start_req(Sg_request *srp, unsigned char *cmd)
+ 			iov_count = iov_shorten(iov, iov_count, hp->dxfer_len);
+ 			len = hp->dxfer_len;
+ 		}
++		if (len == 0) {
++			kfree(iov);
++			return -EINVAL;
++		}
+ 
+ 		res = blk_rq_map_user_iov(q, rq, md, (struct sg_iovec *)iov,
+ 					  iov_count,
+-- 
+2.43.0
+

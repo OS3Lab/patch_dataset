@@ -1,0 +1,64 @@
+From c2933e8c7d110b619cea0bd157e832151ddc9eaf Mon Sep 17 00:00:00 2001
+From: Jan Remmet <j.remmet@phytec.de>
+Date: Fri, 23 Sep 2016 10:52:00 +0200
+Subject: [PATCH] regulator: tps65910: Work around silicon erratum SWCZ010
+
+commit 8f9165c981fed187bb483de84caf9adf835aefda upstream.
+
+http://www.ti.com/lit/pdf/SWCZ010:
+  DCDC o/p voltage can go higher than programmed value
+
+Impact:
+VDDI, VDD2, and VIO output programmed voltage level can go higher than
+expected or crash, when coming out of PFM to PWM mode or using DVFS.
+
+Description:
+When DCDC CLK SYNC bits are 11/01:
+* VIO 3-MHz oscillator is the source clock of the digital core and input
+  clock of VDD1 and VDD2
+* Turn-on of VDD1 and VDD2 HSD PFETis synchronized or at a constant
+  phase shift
+* Current pulled though VCC1+VCC2 is Iload(VDD1) + Iload(VDD2)
+* The 3 HSD PFET will be turned-on at the same time, causing the highest
+  possible switching noise on the application. This noise level depends
+  on the layout, the VBAT level, and the load current. The noise level
+  increases with improper layout.
+
+When DCDC CLK SYNC bits are 00:
+* VIO 3-MHz oscillator is the source clock of digital core
+* VDD1 and VDD2 are running on their own 3-MHz oscillator
+* Current pulled though VCC1+VCC2 average of Iload(VDD1) + Iload(VDD2)
+* The switching noise of the 3 SMPS will be randomly spread over time,
+  causing lower overall switching noise.
+
+Workaround:
+Set DCDCCTRL_REG[1:0]= 00.
+
+Signed-off-by: Jan Remmet <j.remmet@phytec.de>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+[bwh: Backported to 3.2: use tps65910_clear_bits()]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/regulator/tps65910-regulator.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/drivers/regulator/tps65910-regulator.c b/drivers/regulator/tps65910-regulator.c
+index b552aae55b41..c79fb30fd536 100644
+--- a/drivers/regulator/tps65910-regulator.c
++++ b/drivers/regulator/tps65910-regulator.c
+@@ -904,6 +904,12 @@ static __devinit int tps65910_probe(struct platform_device *pdev)
+ 		pmic->get_ctrl_reg = &tps65910_get_ctrl_register;
+ 		pmic->num_regulators = ARRAY_SIZE(tps65910_regs);
+ 		info = tps65910_regs;
++		/* Work around silicon erratum SWCZ010: output programmed
++		 * voltage level can go higher than expected or crash
++		 * Workaround: use no synchronization of DCDC clocks
++		 */
++		tps65910_clear_bits(pmic->mfd, TPS65910_DCDCCTRL,
++				    DCDCCTRL_DCDCCKSYNC_MASK);
+ 		break;
+ 	case TPS65911:
+ 		pmic->get_ctrl_reg = &tps65911_get_ctrl_register;
+-- 
+2.43.0
+

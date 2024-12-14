@@ -1,0 +1,37 @@
+From 69328181ccf2e19556425773881bf23de0b8d9be Mon Sep 17 00:00:00 2001
+From: Alexandre Belloni <alexandre.belloni@free-electrons.com>
+Date: Thu, 28 Sep 2017 13:53:27 +0200
+Subject: [PATCH] rtc: set the alarm to the next expiring timer
+
+commit 74717b28cb32e1ad3c1042cafd76b264c8c0f68d upstream.
+
+If there is any non expired timer in the queue, the RTC alarm is never set.
+This is an issue when adding a timer that expires before the next non
+expired timer.
+
+Ensure the RTC alarm is set in that case.
+
+Fixes: 2b2f5ff00f63 ("rtc: interface: ignore expired timers when enqueuing new timers")
+Signed-off-by: Alexandre Belloni <alexandre.belloni@free-electrons.com>
+[bwh: Backported to 3.2: open-code ktime_before()]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/rtc/interface.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/rtc/interface.c b/drivers/rtc/interface.c
+index a623983b8716..3b58f94be227 100644
+--- a/drivers/rtc/interface.c
++++ b/drivers/rtc/interface.c
+@@ -765,7 +765,7 @@ static int rtc_timer_enqueue(struct rtc_device *rtc, struct rtc_timer *timer)
+ 	}
+ 
+ 	timerqueue_add(&rtc->timerqueue, &timer->node);
+-	if (!next) {
++	if (!next || timer->node.expires.tv64 < next->expires.tv64) {
+ 		struct rtc_wkalrm alarm;
+ 		int err;
+ 		alarm.time = rtc_ktime_to_tm(timer->node.expires);
+-- 
+2.43.0
+

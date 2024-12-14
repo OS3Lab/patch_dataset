@@ -1,0 +1,35 @@
+From 14e535d7fffd131971f8a6ee79f690951c57a312 Mon Sep 17 00:00:00 2001
+From: Yangtao Li <tiny.windzz@gmail.com>
+Date: Wed, 26 Dec 2018 08:59:36 -0500
+Subject: [PATCH] clk: vf610: fix refcount leak in vf610_clocks_init()
+
+commit 567177024e0313e4f0dcba7ba10c0732e50e655d upstream.
+
+The of_find_compatible_node() returns a node pointer with refcount
+incremented, but there is the lack of use of the of_node_put() when
+done. Add the missing of_node_put() to release the refcount.
+
+Signed-off-by: Yangtao Li <tiny.windzz@gmail.com>
+Fixes: 1f2c5fd5f048 ("ARM: imx: add VF610 clock support")
+Signed-off-by: Stephen Boyd <sboyd@kernel.org>
+[bwh: Backported to 3.16: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ arch/arm/mach-imx/clk-vf610.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm/mach-imx/clk-vf610.c b/arch/arm/mach-imx/clk-vf610.c
+index 22dc3ee21fd4..d701e039996f 100644
+--- a/arch/arm/mach-imx/clk-vf610.c
++++ b/arch/arm/mach-imx/clk-vf610.c
+@@ -117,6 +117,7 @@ static void __init vf610_clocks_init(struct device_node *ccm_node)
+ 	np = of_find_compatible_node(NULL, NULL, "fsl,vf610-anatop");
+ 	anatop_base = of_iomap(np, 0);
+ 	BUG_ON(!anatop_base);
++	of_node_put(np);
+ 
+ 	np = ccm_node;
+ 	ccm_base = of_iomap(np, 0);
+-- 
+2.43.0
+

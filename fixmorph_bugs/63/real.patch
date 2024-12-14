@@ -1,0 +1,34 @@
+From bae102ee0220833f123c6973aa66c4c7a92ee5ca Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michael=20B=C3=BCsch?= <m@bues.ch>
+Date: Tue, 31 Jul 2018 21:14:04 +0200
+Subject: [PATCH] b43/leds: Ensure NUL-termination of LED name string
+
+commit 2aa650d1950fce94f696ebd7db30b8830c2c946f upstream.
+
+strncpy might not NUL-terminate the string, if the name equals the buffer size.
+Use strlcpy instead.
+
+Signed-off-by: Michael Buesch <m@bues.ch>
+Signed-off-by: Kalle Valo <kvalo@codeaurora.org>
+[bwh: Backported to 3.16: adjust filename]
+Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
+---
+ drivers/net/wireless/b43/leds.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/wireless/b43/leds.c b/drivers/net/wireless/b43/leds.c
+index d79ab2a227e1..ba3965a114d9 100644
+--- a/drivers/net/wireless/b43/leds.c
++++ b/drivers/net/wireless/b43/leds.c
+@@ -131,7 +131,7 @@ static int b43_register_led(struct b43_wldev *dev, struct b43_led *led,
+ 	led->wl = dev->wl;
+ 	led->index = led_index;
+ 	led->activelow = activelow;
+-	strncpy(led->name, name, sizeof(led->name));
++	strlcpy(led->name, name, sizeof(led->name));
+ 	atomic_set(&led->state, 0);
+ 
+ 	led->led_dev.name = led->name;
+-- 
+2.43.0
+
