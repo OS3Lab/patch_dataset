@@ -1,0 +1,2 @@
+make allyesconfig
+make HOSTCC=gcc-4.7 CC=gcc-4.7 -j `nproc` arch/x86/kernel/cpu/perf_event_intel_uncore_nhmex.o
